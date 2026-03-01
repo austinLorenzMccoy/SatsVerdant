@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![SatsVerdant Logo](https://raw.githubusercontent.com/austinLorenzMccoy/SatsVerdant/main/frontend/public/icon.svg)
+![SatsVerdant Logo](https://raw.githubusercontent.com/austinLorenzMccoy/SatsVerdant/main/frontend/public/satsverdant-logo.svg)
 
 **Turn Trash into Bitcoin - Earn sBTC for verified recycling**
 
