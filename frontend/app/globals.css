@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Verdant Stack Theme - Primary Palette */
+  --verdant-soil: #1a1410;
+  --verdant-moss: #2d4a2b;
+  --verdant-sprout: #4a7c59;
+  --verdant-gold: #d4a574;
+  --verdant-sats: #f7931a;
+  --verdant-sage: #8ba888;
+  --verdant-paper: #f4ede4;
+  --verdant-carbon: #0a0e0d;
+
+  /* Functional Colors */
+  --success: #4caf50;
+  --warning: #ff9800;
+  --error: #d84315;
+  --info: #5fa3d0;
+
+  /* Semantic Tokens */
+  --background: var(--verdant-soil);
+  --foreground: var(--verdant-paper);
+  --card: rgba(45, 74, 43, 0.15);
+  --card-foreground: var(--verdant-paper);
+  --popover: var(--verdant-carbon);
+  --popover-foreground: var(--verdant-paper);
+  --primary: var(--verdant-sats);
+  --primary-foreground: var(--verdant-carbon);
+  --secondary: var(--verdant-sprout);
+  --secondary-foreground: var(--verdant-paper);
+  --muted: rgba(139, 168, 136, 0.2);
+  --muted-foreground: var(--verdant-sage);
+  --accent: var(--verdant-gold);
+  --accent-foreground: var(--verdant-carbon);
+  --destructive: var(--error);
+  --destructive-foreground: var(--verdant-paper);
+  --border: rgba(139, 168, 136, 0.2);
+  --input: rgba(139, 168, 136, 0.2);
+  --ring: var(--verdant-sats);
+
+  /* Sidebar */
+  --sidebar: var(--verdant-carbon);
+  --sidebar-foreground: var(--verdant-paper);
+  --sidebar-primary: var(--verdant-sats);
+  --sidebar-primary-foreground: var(--verdant-carbon);
+  --sidebar-accent: rgba(74, 124, 89, 0.15);
+  --sidebar-accent-foreground: var(--verdant-paper);
+  --sidebar-border: rgba(139, 168, 136, 0.1);
+  --sidebar-ring: var(--verdant-sats);
+  --sidebar-width: 260px;
+  --sidebar-collapsed: 72px;
+
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --font-sans: 'Instrument Sans', 'Geist', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
+  --font-display: 'Syne', 'Geist', sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Verdant custom colors */
+  --color-verdant-soil: var(--verdant-soil);
+  --color-verdant-moss: var(--verdant-moss);
+  --color-verdant-sprout: var(--verdant-sprout);
+  --color-verdant-gold: var(--verdant-gold);
+  --color-verdant-sats: var(--verdant-sats);
+  --color-verdant-sage: var(--verdant-sage);
+  --color-verdant-paper: var(--verdant-paper);
+  --color-verdant-carbon: var(--verdant-carbon);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Noise Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Custom Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-float-delay-1 {
+  animation: float 3s ease-in-out infinite 0.5s;
+}
+
+.animate-float-delay-2 {
+  animation: float 3s ease-in-out infinite 1s;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

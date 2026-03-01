@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SatsVerdant - Turn Trash into Bitcoin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================
+       CSS VARIABLES - VERDANT STACK THEME
+       ============================================ */
+    :root {
+      /* Colors */
+      --verdant-soil: #1a1410;
+      --verdant-moss: #2d4a2b;
+      --verdant-sprout: #4a7c59;
+      --verdant-gold: #d4a574;
+      --verdant-sats: #f7931a;
+      --verdant-sage: #8ba888;
+      --verdant-paper: #f4ede4;
+      --verdant-carbon: #0a0e0d;
+      
+      /* Functional */
+      --success: #4caf50;
+      --warning: #ff9800;
+      --error: #d84315;
+      --info: #5fa3d0;
+      
+      /* Typography */
+      --font-display: 'Syne', sans-serif;
+      --font-body: 'Instrument Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+      
+      /* Spacing */
+      --space-xs: 0.25rem;
+      --space-sm: 0.5rem;
+      --space-md: 1rem;
+      --space-lg: 1.5rem;
+      --space-xl: 2rem;
+      --space-2xl: 3rem;
+      
+      /* Borders */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      
+      /* Sidebar */
+      --sidebar-width: 260px;
+      --sidebar-collapsed: 72px;
+    }
+
+    /* ============================================
+       RESET & BASE STYLES
+       ============================================ */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--verdant-soil);
+      color: var(--verdant-paper);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    a {
+      color: var(--verdant-sats);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover {
+      color: var(--verdant-gold);
+    }
+
+    button {
+      font-family: var(--font-body);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    /* ============================================
+       UTILITY CLASSES
+       ============================================ */
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 var(--space-lg);
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .flex-col {
+      flex-direction: column;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .justify-between {
+      justify-content: space-between;
+    }
+
+    .gap-sm { gap: var(--space-sm); }
+    .gap-md { gap: var(--space-md); }
+    .gap-lg { gap: var(--space-lg); }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* ============================================
+       NOISE TEXTURE OVERLAY
+       ============================================ */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ============================================
+       LANDING PAGE STYLES
+       ============================================ */
+    #landing-page {
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, 
+        var(--verdant-carbon) 0%, 
+        var(--verdant-soil) 50%, 
+        var(--verdant-moss) 100%);
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=1920');
+      background-size: cover;
+      background-position: center;
+      opacity: 0.15;
+      filter: blur(2px);
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      max-width: 900px;
+      padding: var(--space-2xl);
+      animation: fadeInUp 0.8s ease-out;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 8vw, 5rem);
+      margin-bottom: var(--space-lg);
+      background: linear-gradient(120deg, var(--verdant-paper), var(--verdant-gold), var(--verdant-sats));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: clamp(1rem, 3vw, 1.5rem);
+      color: var(--verdant-sage);
+      margin-bottom: var(--space-2xl);
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-md);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--verdant-sats), var(--verdant-gold));
+      color: var(--verdant-carbon);
+      padding: var(--space-md) var(--space-xl);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 1.1rem;
+      box-shadow: 0 8px 24px rgba(247, 147, 26, 0.3);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.5s, height 0.5s;
+    }
+
+    .btn-primary:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(247, 147, 26, 0.4);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--verdant-paper);
+      padding: var(--space-md) var(--space-xl);
+      border: 2px solid var(--verdant-sprout);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .btn-secondary:hover {
+      background: var(--verdant-sprout);
+      border-color: var(--verdant-sprout);
+    }
+
+    /* Floating Stats */
+    .floating-stats {
+      position: absolute;
+      bottom: var(--space-2xl);
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: var(--space-lg);
+      z-index: 3;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stat-card {
+      background: rgba(45, 74, 43, 0.4);
+      backdrop-filter: blur(12px);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(139, 168, 136, 0.2);
+      min-width: 160px;
+      text-align: center;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .stat-card:nth-child(2) {
+      animation-delay: 0.5s;
+    }
+
+    .stat-card:nth-child(3) {
+      animation-delay: 1s;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: var(--verdant-sats);
+      display: block;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--verdant-sage);
+      margin-top: var(--space-xs);
+    }
+
+    /* Navigation */
+    .landing-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(10, 14, 13, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(139, 168, 136, 0.1);
+      padding: var(--space-md) var(--space-lg);
+    }
+
+    .landing-nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--verdant-sats);
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--verdant-sprout), var(--verdant-sats));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--verdant-carbon);
+    }
+
+    /* ============================================
+       DASHBOARD STYLES
+       ============================================ */
+    #dashboard {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--verdant-carbon);
+      border-right: 1px solid rgba(139, 168, 136, 0.1);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      left: 0;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 50;
+    }
+
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+    }
+
+    .sidebar-header {
+      padding: var(--space-lg);
+      border-bottom: 1px solid rgba(139, 168, 136, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar.collapsed .sidebar-header {
+      justify-content: center;
+    }
+
+    .sidebar.collapsed .logo span {
+      display: none;
+    }
+
+    .collapse-btn {
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: 1px solid rgba(139, 168, 136, 0.2);
+      border-radius: var(--radius-sm);
+      color: var(--verdant-sage);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .sidebar.collapsed .collapse-btn {
+      display: none;
+    }
+
+    .collapse-btn:hover {
+      background: rgba(139, 168, 136, 0.1);
+      border-color: var(--verdant-sprout);
+    }
+
+    /* Wallet Status */
+    .wallet-status {
+      padding: var(--space-lg);
+      border-bottom: 1px solid rgba(139, 168, 136, 0.1);
+    }
+
+    .sidebar.collapsed .wallet-status {
+      padding: var(--space-sm);
+      text-align: center;
+    }
+
+    .wallet-connected {
+      background: rgba(74, 124, 89, 0.2);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(74, 124, 89, 0.3);
+    }
+
+    .sidebar.collapsed .wallet-connected {
+      padding: var(--space-sm);
+    }
+
+    .wallet-address {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--verdant-sage);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .sidebar.collapsed .wallet-address {
+      display: none;
+    }
+
+    .wallet-balance {
+      font-size: 0.9rem;
+      color: var(--verdant-sats);
+      font-weight: 600;
+      margin-top: var(--space-xs);
+    }
+
+    .btn-connect {
+      width: 100%;
+      background: linear-gradient(135deg, var(--verdant-sats), var(--verdant-gold));
+      color: var(--verdant-carbon);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      font-weight: 600;
+    }
+
+    .sidebar.collapsed .btn-connect {
+      padding: var(--space-sm);
+      font-size: 0.85rem;
+    }
+
+    /* Navigation Menu */
+    .nav-menu {
+      flex: 1;
+      padding: var(--space-lg) 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      color: var(--verdant-sage);
+      font-weight: 500;
+      transition: all 0.2s;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sidebar.collapsed .nav-item {
+      justify-content: center;
+      padding: var(--space-md) var(--space-sm);
+    }
+
+    .nav-item::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--verdant-sats);
+      transform: scaleY(0);
+      transition: transform 0.2s;
+    }
+
+    .nav-item.active::before,
+    .nav-item:hover::before {
+      transform: scaleY(1);
+    }
+
+    .nav-item.active {
+      background: rgba(74, 124, 89, 0.15);
+      color: var(--verdant-paper);
+    }
+
+    .nav-item:hover {
+      background: rgba(74, 124, 89, 0.1);
+      color: var(--verdant-paper);
+    }
+
+    .nav-icon {
+      font-size: 1.3rem;
+      min-width: 24px;
+    }
+
+    .nav-label {
+      transition: opacity 0.3s;
+    }
+
+    .sidebar.collapsed .nav-label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+    }
+
+    /* Sidebar Footer */
+    .sidebar-footer {
+      padding: var(--space-lg);
+      border-top: 1px solid rgba(139, 168, 136, 0.1);
+    }
+
+    .sidebar.collapsed .sidebar-footer {
+      padding: var(--space-sm);
+    }
+
+    .network-badge {
+      background: rgba(95, 163, 208, 0.2);
+      color: var(--info);
+      padding: var(--space-xs) var(--space-sm);
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+      border: 1px solid rgba(95, 163, 208, 0.3);
+    }
+
+    .sidebar.collapsed .network-badge {
+      font-size: 0.65rem;
+      padding: var(--space-xs);
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: var(--sidebar-width);
+      transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      background: linear-gradient(180deg, 
+        var(--verdant-soil) 0%, 
+        var(--verdant-carbon) 100%);
+      min-height: 100vh;
+    }
+
+    .sidebar.collapsed ~ .main-content {
+      margin-left: var(--sidebar-collapsed);
+    }
+
+    .dashboard-header {
+      background: rgba(10, 14, 13, 0.6);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(139, 168, 136, 0.1);
+      padding: var(--space-lg) var(--space-xl);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .dashboard-header h1 {
+      font-size: 2rem;
+      color: var(--verdant-paper);
+    }
+
+    .breadcrumb {
+      display: flex;
+      gap: var(--space-sm);
+      color: var(--verdant-sage);
+      font-size: 0.9rem;
+      margin-top: var(--space-xs);
+    }
+
+    .content-area {
+      padding: var(--space-xl);
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+    }
+
+    .metric-card {
+      background: rgba(45, 74, 43, 0.2);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(139, 168, 136, 0.2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--verdant-sats), var(--verdant-gold));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .metric-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(247, 147, 26, 0.15);
+      border-color: rgba(247, 147, 26, 0.3);
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      color: var(--verdant-sage);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--space-sm);
+    }
+
+    .metric-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--verdant-paper);
+      display: block;
+      margin-bottom: var(--space-xs);
+    }
+
+    .metric-change {
+      font-size: 0.85rem;
+      color: var(--success);
+    }
+
+    /* Card Component */
+    .card {
+      background: rgba(45, 74, 43, 0.15);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(139, 168, 136, 0.2);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+
+    .card-header {
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-md);
+      border-bottom: 1px solid rgba(139, 168, 136, 0.1);
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      color: var(--verdant-paper);
+      margin-bottom: var(--space-xs);
+    }
+
+    .card-subtitle {
+      font-size: 0.9rem;
+      color: var(--verdant-sage);
+    }
+
+    /* Submission Card */
+    .submission-list {
+      display: grid;
+      gap: var(--space-lg);
+    }
+
+    .submission-card {
+      background: rgba(45, 74, 43, 0.15);
+      border: 1px solid rgba(139, 168, 136, 0.2);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      display: grid;
+      grid-template-columns: 80px 1fr auto;
+      gap: var(--space-md);
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .submission-card:hover {
+      border-color: rgba(247, 147, 26, 0.3);
+      transform: translateX(4px);
+    }
+
+    .submission-image {
+      width: 80px;
+      height: 80px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      background: rgba(139, 168, 136, 0.1);
+    }
+
+    .submission-details h4 {
+      font-size: 1rem;
+      color: var(--verdant-paper);
+      margin-bottom: var(--space-xs);
+    }
+
+    .submission-meta {
+      display: flex;
+      gap: var(--space-md);
+      font-size: 0.85rem;
+      color: var(--verdant-sage);
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-plastic { background: rgba(95, 163, 208, 0.2); color: var(--info); }
+    .badge-paper { background: rgba(212, 165, 116, 0.2); color: var(--verdant-gold); }
+    .badge-metal { background: rgba(139, 168, 136, 0.2); color: var(--verdant-sage); }
+    .badge-organic { background: rgba(74, 188, 80, 0.2); color: var(--success); }
+
+    .badge-pending { background: rgba(255, 152, 0, 0.2); color: var(--warning); }
+    .badge-approved { background: rgba(76, 175, 80, 0.2); color: var(--success); }
+    .badge-minted { background: rgba(247, 147, 26, 0.2); color: var(--verdant-sats); }
+    .badge-rejected { background: rgba(216, 67, 21, 0.2); color: var(--error); }
+
+    .submission-reward {
+      text-align: right;
+    }
+
+    .reward-amount {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--verdant-sats);
+    }
+
+    .reward-label {
+      font-size: 0.75rem;
+      color: var(--verdant-sage);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: var(--space-2xl);
+      color: var(--verdant-sage);
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: var(--space-lg);
+      opacity: 0.3;
+    }
+
+    .empty-state h3 {
+      color: var(--verdant-paper);
+      margin-bottom: var(--space-sm);
+    }
+
+    /* 404 Page */
+    .not-found {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: var(--space-2xl);
+    }
+
+    .not-found h1 {
+      font-size: 8rem;
+      background: linear-gradient(120deg, var(--verdant-sats), var(--verdant-gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: var(--space-lg);
+    }
+
+    .not-found h2 {
+      font-size: 2rem;
+      color: var(--verdant-paper);
+      margin-bottom: var(--space-md);
+    }
+
+    .not-found p {
+      color: var(--verdant-sage);
+      margin-bottom: var(--space-xl);
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ============================================
+       ANIMATIONS
+       ============================================ */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .pulse {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ============================================
+       RESPONSIVE DESIGN
+       ============================================ */
+    @media (max-width: 1024px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .sidebar.mobile-open {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .sidebar.collapsed ~ .main-content {
+        margin-left: 0;
+      }
+
+      .mobile-menu-btn {
+        display: block;
+        position: fixed;
+        bottom: var(--space-lg);
+        right: var(--space-lg);
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, var(--verdant-sats), var(--verdant-gold));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--verdant-carbon);
+        box-shadow: 0 8px 24px rgba(247, 147, 26, 0.4);
+        z-index: 60;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+
+      .hero p {
+        font-size: 1.1rem;
+      }
+
+      .hero-cta {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .hero-cta button {
+        width: 100%;
+      }
+
+      .floating-stats {
+        position: relative;
+        bottom: auto;
+        padding: var(--space-lg);
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .submission-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .submission-image {
+        width: 100%;
+        height: 200px;
+      }
+
+      .submission-reward {
+        text-align: center;
+      }
+
+      .content-area {
+        padding: var(--space-lg);
+      }
+    }
+
+    /* ============================================
+       REDUCED MOTION
+       ============================================ */
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- ============================================
+       LANDING PAGE
+       ============================================ -->
+  <div id="landing-page">
+    <nav class="landing-nav">
+      <div class="container">
+        <div class="logo">
+          <div class="logo-icon">SV</div>
+          <span>SatsVerdant</span>
+        </div>
+        <button class="btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-content">
+        <h1>Turn Trash into Bitcoin</h1>
+        <p>Proof that Bitcoin heals the planet, not hurts it. Earn sBTC for verified recycling. Zero greenwashing.</p>
+        <div class="hero-cta">
+          <button class="btn-primary" onclick="connectWallet()">Start Earning sBTC</button>
+          <button class="btn-secondary" onclick="showPage('dashboard')">View Dashboard</button>
+        </div>
+      </div>
+
+      <div class="floating-stats">
+        <div class="stat-card">
+          <span class="stat-value">1,240</span>
+          <span class="stat-label">kg Recycled</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">0.52</span>
+          <span class="stat-label">BTC Distributed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">3.2t</span>
+          <span class="stat-label">CO₂ Offset</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============================================
+       DASHBOARD
+       ============================================ -->
+  <div id="dashboard" class="hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">SV</div>
+          <span>SatsVerdant</span>
+        </div>
+        <button class="collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar">
+          ◀
+        </button>
+      </div>
+
+      <div class="wallet-status">
+        <div id="wallet-connected" class="wallet-connected hidden">
+          <div class="wallet-address">ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM</div>
+          <div class="wallet-balance">0.0042 sBTC</div>
+        </div>
+        <button id="wallet-connect-btn" class="btn-connect" onclick="connectWallet()">
+          Connect Wallet
+        </button>
+      </div>
+
+      <nav class="nav-menu">
+        <div class="nav-item active" onclick="switchPage('overview')">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Overview</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('submit')">
+          <span class="nav-icon">📸</span>
+          <span class="nav-label">Submit Waste</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('rewards')">
+          <span class="nav-icon">💰</span>
+          <span class="nav-label">Rewards</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('validate')">
+          <span class="nav-icon">✅</span>
+          <span class="nav-label">Validate</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('impact')">
+          <span class="nav-icon">🌍</span>
+          <span class="nav-label">Impact</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('settings')">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-label">Settings</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="network-badge">Stacks Testnet</div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="dashboard-header">
+        <h1 id="page-title">Overview</h1>
+        <div class="breadcrumb">
+          <span onclick="showPage('landing')">Home</span>
+          <span>›</span>
+          <span>Dashboard</span>
+          <span id="breadcrumb-page">› Overview</span>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <!-- Overview Page -->
+        <div id="page-overview" class="page-content">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Total Earnings</div>
+              <span class="metric-value">0.0042 sBTC</span>
+              <div class="metric-change">+12.5% this week</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Waste Recycled</div>
+              <span class="metric-value">12.5 kg</span>
+              <div class="metric-change">+3.2 kg this week</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Carbon Offset</div>
+              <span class="metric-value">3.2 kg</span>
+              <div class="metric-change">CO₂ equivalent</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Recent Submissions</h2>
+              <p class="card-subtitle">Your latest waste submissions</p>
+            </div>
+            <div class="submission-list">
+              <div class="submission-card">
+                <img src="https://images.unsplash.com/photo-1604187351574-c75ca79f5807?w=400" alt="Plastic bottles" class="submission-image">
+                <div class="submission-details">
+                  <h4>Plastic Bottles</h4>
+                  <div class="submission-meta">
+                    <span class="badge badge-plastic">Plastic</span>
+                    <span class="badge badge-minted">Minted</span>
+                    <span>0.5 kg • 2 days ago</span>
+                  </div>
+                </div>
+                <div class="submission-reward">
+                  <div class="reward-amount">50 tokens</div>
+                  <div class="reward-label">0.0005 sBTC</div>
+                </div>
+              </div>
+
+              <div class="submission-card">
+                <img src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400" alt="Paper waste" class="submission-image">
+                <div class="submission-details">
+                  <h4>Cardboard Boxes</h4>
+                  <div class="submission-meta">
+                    <span class="badge badge-paper">Paper</span>
+                    <span class="badge badge-approved">Approved</span>
+                    <span>1.2 kg • 3 days ago</span>
+                  </div>
+                </div>
+                <div class="submission-reward">
+                  <div class="reward-amount">120 tokens</div>
+                  <div class="reward-label">Pending mint</div>
+                </div>
+              </div>
+
+              <div class="submission-card">
+                <img src="https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=400" alt="Metal cans" class="submission-image">
+                <div class="submission-details">
+                  <h4>Aluminum Cans</h4>
+                  <div class="submission-meta">
+                    <span class="badge badge-metal">Metal</span>
+                    <span class="badge badge-pending">Pending</span>
+                    <span>0.8 kg • 5 days ago</span>
+                  </div>
+                </div>
+                <div class="submission-reward">
+                  <div class="reward-amount pulse">Validating...</div>
+                  <div class="reward-label">Est. 80 tokens</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Waste Page -->
+        <div id="page-submit" class="page-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Submit Waste for Verification</h2>
+              <p class="card-subtitle">Upload a photo of your recyclables to earn sBTC</p>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-icon">📸</div>
+              <h3>Upload Your Recyclables</h3>
+              <p>Take a photo of plastic, paper, metal, or organic waste to get started</p>
+              <button class="btn-primary" style="margin-top: var(--space-lg);">
+                Choose Photo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rewards Page -->
+        <div id="page-rewards" class="page-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Claimable Rewards</h2>
+              <p class="card-subtitle">Claim your earned sBTC rewards</p>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-icon">💰</div>
+              <h3>No Rewards Available</h3>
+              <p>Submit and get your waste verified to earn rewards</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Validate Page -->
+        <div id="page-validate" class="page-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Validation Queue</h2>
+              <p class="card-subtitle">Review and approve pending submissions</p>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-icon">✅</div>
+              <h3>Validator Access Required</h3>
+              <p>Stake STX to become a validator and earn fees</p>
+              <button class="btn-primary" style="margin-top: var(--space-lg);">
+                Stake STX
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Impact Page -->
+        <div id="page-impact" class="page-content hidden">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Total Impact</div>
+              <span class="metric-value">12.5 kg</span>
+              <div class="metric-change">Waste recycled</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CO₂ Offset</div>
+              <span class="metric-value">3.2 kg</span>
+              <div class="metric-change">Equivalent to 0.15 trees</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Contributions</div>
+              <span class="metric-value">8</span>
+              <div class="metric-change">Verified submissions</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Impact Timeline</h2>
+              <p class="card-subtitle">Your environmental contribution over time</p>
+            </div>
+            <div class="empty-state">
+              <div class="empty-state-icon">📈</div>
+              <h3>Building Your Impact</h3>
+              <p>Keep submitting to see your environmental impact grow</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="page-settings" class="page-content hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Account Settings</h2>
+              <p class="card-subtitle">Manage your wallet and preferences</p>
+            </div>
+            <div style="padding: var(--space-lg);">
+              <h3 style="margin-bottom: var(--space-md); color: var(--verdant-paper);">Wallet</h3>
+              <div class="wallet-connected" style="margin-bottom: var(--space-xl);">
+                <div class="wallet-address">ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM</div>
+                <button class="btn-secondary" style="margin-top: var(--space-md); width: auto; padding: var(--space-sm) var(--space-lg);">
+                  Disconnect
+                </button>
+              </div>
+
+              <h3 style="margin-bottom: var(--space-md); color: var(--verdant-paper);">Preferences</h3>
+              <div style="color: var(--verdant-sage);">
+                <p>• Email notifications: Enabled</p>
+                <p>• Language: English</p>
+                <p>• Network: Testnet</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Mobile Menu Button (hidden on desktop) -->
+    <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" style="display: none;">
+      ☰
+    </button>
+  </div>
+
+  <!-- ============================================
+       404 PAGE
+       ============================================ -->
+  <div id="not-found" class="not-found hidden">
+    <div>
+      <h1>404</h1>
+      <h2>Page Not Found</h2>
+      <p>The page you're looking for doesn't exist or has been moved.</p>
+      <div style="display: flex; gap: var(--space-md); justify-content: center;">
+        <button class="btn-primary" onclick="showPage('landing')">Go Home</button>
+        <button class="btn-secondary" onclick="showPage('dashboard')">Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================
+       JAVASCRIPT
+       ============================================ -->
+  <script>
+    // State management
+    let isWalletConnected = false;
+    let currentPage = 'landing';
+    let isSidebarCollapsed = false;
+
+    // Load saved sidebar state
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('sidebarCollapsed');
+      if (saved === 'true') {
+        toggleSidebar();
+      }
+    });
+
+    // Show/hide pages
+    function showPage(pageName) {
+      // Hide all pages
+      document.getElementById('landing-page').classList.add('hidden');
+      document.getElementById('dashboard').classList.add('hidden');
+      document.getElementById('not-found').classList.add('hidden');
+
+      // Show requested page
+      if (pageName === 'landing') {
+        document.getElementById('landing-page').classList.remove('hidden');
+        currentPage = 'landing';
+      } else if (pageName === 'dashboard') {
+        document.getElementById('dashboard').classList.remove('hidden');
+        currentPage = 'dashboard';
+        switchPage('overview');
+      } else {
+        document.getElementById('not-found').classList.remove('hidden');
+        setTimeout(() => showPage('landing'), 3000);
+      }
+    }
+
+    // Switch dashboard pages
+    function switchPage(page) {
+      // Hide all page contents
+      const pages = document.querySelectorAll('.page-content');
+      pages.forEach(p => p.classList.add('hidden'));
+
+      // Show selected page
+      const pageElement = document.getElementById(`page-${page}`);
+      if (pageElement) {
+        pageElement.classList.remove('hidden');
+      }
+
+      // Update nav active state
+      const navItems = document.querySelectorAll('.nav-item');
+      navItems.forEach(item => item.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+
+      // Update header
+      const titles = {
+        'overview': 'Overview',
+        'submit': 'Submit Waste',
+        'rewards': 'Rewards',
+        'validate': 'Validate',
+        'impact': 'Impact',
+        'settings': 'Settings'
+      };
+      document.getElementById('page-title').textContent = titles[page] || 'Dashboard';
+      document.getElementById('breadcrumb-page').textContent = `› ${titles[page]}`;
+
+      // Scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Toggle sidebar collapse
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      isSidebarCollapsed = !isSidebarCollapsed;
+      
+      if (isSidebarCollapsed) {
+        sidebar.classList.add('collapsed');
+        localStorage.setItem('sidebarCollapsed', 'true');
+      } else {
+        sidebar.classList.remove('collapsed');
+        localStorage.setItem('sidebarCollapsed', 'false');
+      }
+    }
+
+    // Toggle mobile sidebar
+    function toggleMobileSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('mobile-open');
+    }
+
+    // Connect wallet (mock)
+    function connectWallet() {
+      isWalletConnected = true;
+      document.getElementById('wallet-connected').classList.remove('hidden');
+      document.getElementById('wallet-connect-btn').classList.add('hidden');
+      
+      // Show dashboard
+      showPage('dashboard');
+      
+      // Mock notification
+      alert('Wallet connected! Welcome to SatsVerdant.');
+    }
+
+    // Responsive handling
+    function handleResize() {
+      if (window.innerWidth <= 1024) {
+        document.querySelector('.mobile-menu-btn').style.display = 'flex';
+      } else {
+        document.querySelector('.mobile-menu-btn').style.display = 'none';
+        document.getElementById('sidebar').classList.remove('mobile-open');
+      }
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // Close mobile sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+      const sidebar = document.getElementById('sidebar');
+      const menuBtn = document.querySelector('.mobile-menu-btn');
+      
+      if (window.innerWidth <= 1024 && 
+          sidebar.classList.contains('mobile-open') &&
+          !sidebar.contains(e.target) &&
+          !menuBtn.contains(e.target)) {
+        sidebar.classList.remove('mobile-open');
+      }
+    });
+  </script>
+</body>
+</html>
