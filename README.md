@@ -57,20 +57,22 @@ mvp_folder/
 │   ├── components/       # Reusable UI components
 │   ├── hooks/           # Custom React hooks
 │   └── public/          # Static assets
-├── ⚙️ backend/            # Supabase + FastAPI + Python
-│   ├── app/             # API endpoints
-│   ├── models/          # Database models
-│   ├── services/        # Business logic
-│   └── tests/           # Test suite
+├── ⚙️ backend/            # Supabase (serverless)
+│   ├── supabase/         # Database schema + Edge Functions
+│   │   ├── migrations/    # Database migrations
+│   │   ├── functions/     # Serverless API endpoints
+│   │   └── seed-data/     # Sample data
+│   ├── docs/             # Deployment guides
+│   └── scripts/          # Setup automation
 ├── 📜 contracts/         # Clarity Smart Contracts
 │   ├── contracts/       # Smart contract code
 │   ├── tests/          # Contract tests
 │   └── settings/       # Deployment configs
 ├── 🤖 ml-training/        # Machine Learning Pipeline
-│   ├── scripts/        # Training scripts
-│   ├── models/         # Trained models
-│   ├── data/           # Dataset (DVC-tracked)
-│   └── dvc.yaml        # Pipeline definition
+│   ├── src/             # Training scripts
+│   ├── models/          # Trained models
+│   ├── data/            # Dataset (DVC-tracked)
+│   └── dvc.yaml         # Pipeline definition
 └── 📚 docs/              # Documentation & PRDs
 ```
 
@@ -91,11 +93,11 @@ mvp_folder/
 ### Backend Technologies
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| **FastAPI** | Latest | High-performance API |
-| **Python** | 3.12 | Backend language |
-| **PostgreSQL** | Latest | Primary database |
-| **Redis** | Latest | Caching layer |
-| **Pydantic** | Latest | Data validation |
+| **Supabase** | Latest | Serverless database + Edge Functions |
+| **PostgreSQL** | Latest | Primary database (managed) |
+| **PostGIS** | Latest | Spatial queries for location verification |
+| **Row Level Security** | Latest | Database-level access control |
+| **Edge Functions** | Deno | Serverless API endpoints |
 
 ### Blockchain & ML
 | Technology | Purpose |
