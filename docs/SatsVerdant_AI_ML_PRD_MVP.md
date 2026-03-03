@@ -1,1648 +1,1438 @@
-# SatsVerdant AI/ML PRD - MVP
+# SatsVerdant AI/ML PRD — MVP v2.1
 
 ## 1. Executive Summary
 
-**Project:** SatsVerdant AI/ML System  
-**Version:** 1.0 (MVP)  
-**Timeline:** 8 weeks (parallel with backend development)  
-**Goal:** Production-ready AI classification and fraud detection system for waste verification with >85% accuracy and <30 second inference time.
+**Project:** SatsVerdant AI/ML System
+**Version:** 2.1 (MVP — MLOps Revised)
+**Timeline:** 8 weeks (Weeks 5–8 of 12-week grant schedule)
+**Goal:** Production-ready waste classification, fraud prevention, and location verification system achieving >80% accuracy, fully integrated into the Supabase backend and Stacks blockchain reward pipeline — with full MLOps traceability via MLflow, DVC, and DagsHub.
 
-**Core Components:**
-1. **Waste Classification Model** - Computer vision for waste type identification
-2. **Weight Estimation Model** - Regression for weight prediction
-3. **Fraud Detection System** - Multi-signal anomaly detection
-4. **Quality Grading Model** - Image quality assessment
+### What Changed from v1.0
+
+| Area | v1.0 | v2.0 |
+|---|---|---|
+| Backend | FastAPI + Redis + Docker | Supabase + Edge Functions |
+| Training Platform | TensorFlow Serving / TorchServe | Google Colab Pro (A100) |
+| Inference | Self-hosted FastAPI ML service | Groq API (production inference) |
+| Location Verification | PostGIS spatial queries | Supabase PostGIS + Radar.io geofencing |
+| Anti-Fraud | Perceptual hash only | Perceptual hash + Radar.io + rate limiting |
+| Model Export | ONNX + TFLite | TFLite (mobile) + H5 (backend) |
+| Weight Estimation | Heuristic model (MVP) | Retained — heuristic MVP, regression post-MVP |
+| Accuracy Target | 85% | 80% (grant commitment), target 85%+ |
+| Experiment Tracking | W&B only | **MLflow + DagsHub (full MLOps stack)** |
+| Dataset Versioning | None | **DVC + DagsHub remote storage** |
+| Model Registry | None | **MLflow Model Registry via DagsHub** |
+
+### Core Components
+1. **Waste Classification Model** — EfficientNetB0 fine-tuned on 26,000-image dataset
+2. **Fraud Detection System** — Perceptual hashing + Radar.io geofencing + rate limiting
+3. **Quality Grader** — OpenCV-based image quality scoring
+4. **Groq Inference Layer** — Production-speed classification via Groq API
+5. **Supabase Edge Functions** — Serverless ML pipeline orchestration
+6. **MLOps Stack** — MLflow experiment tracking + DVC data versioning + DagsHub collaboration
 
 ---
 
-## 2. System Architecture Overview
+## 2. System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    AI/ML Pipeline                            │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                ┌─────────────┼─────────────────┐
-                │             │                 │
-         ┌──────▼──────┐ ┌───▼────────┐ ┌─────▼──────┐
-         │Waste        │ │Weight      │ │Quality     │
-         │Classifier   │ │Estimator   │ │Grader      │
-         └──────┬──────┘ └───┬────────┘ └─────┬──────┘
-                │            │                 │
-                └────────────┼─────────────────┘
-                             │
-                      ┌──────▼──────┐
-                      │Fraud        │
-                      │Detection    │
-                      └──────┬──────┘
-                             │
-                      ┌──────▼──────┐
-                      │Submission   │
-                      │Score        │
-                      └─────────────┘
+User submits photo (React Native / Web)
+              |
+              v
+   Supabase Storage (image upload)
+              |
+              v
+   Supabase Edge Function: /classify
+   +----------------------------------+
+   |  1. Quality Gate (OpenCV)        |
+   |  2. Perceptual Hash (fraud)      |
+   |  3. Radar.io Geofence check      |
+   |  4. Groq API -> Classification   |
+   |  5. Fraud Score calculation      |
+   |  6. Write result to Supabase DB  |
+   +----------------------------------+
+              |
+              v
+   Supabase DB (submissions table)
+              |
+         +----+----+
+         v         v
+   Auto-approve  Flag for
+   -> mint token  manual review
+         |
+         v
+   Clarity Contract
+   -> sBTC reward distribution
 ```
 
 ---
 
 ## 3. Technical Stack
 
-### **3.1 Frameworks & Libraries**
+### Training
+- **Google Colab Pro** — A100 GPU (~$50/month, ~2-4 hours per full training run)
+- **TensorFlow 2.15** — Model training framework
+- **Albumentations** — Data augmentation
+- **scikit-learn** — Evaluation metrics
+- **Weights & Biases (free tier)** — Training run tracking
 
-**Deep Learning:**
-- **TensorFlow 2.15** or **PyTorch 2.1** (choose one for consistency)
-- **TensorFlow Lite** for mobile deployment
-- **ONNX** for model portability
+### Inference (Production)
+- **Groq API** — Ultra-fast inference via LPU acceleration (~50ms per image)
+- **Supabase Edge Functions** — Deno-based serverless orchestration
+- **TensorFlow Lite** — On-device inference for React Native mobile app
 
-**Computer Vision:**
-- **OpenCV 4.8** - Image preprocessing
-- **Pillow 10.0** - Image manipulation
-- **imgaug 0.4** - Data augmentation
+### Fraud & Location
+- **imagehash** — Perceptual hashing for duplicate detection
+- **Radar.io** — Geofencing to verify physical presence at recycling locations
+- **Supabase PostGIS** (built-in extension) — Spatial queries, no migration needed
 
-**ML Utilities:**
-- **scikit-learn 1.3** - Classical ML algorithms, metrics
-- **NumPy 1.24** - Numerical operations
-- **Pandas 2.1** - Data manipulation
-- **matplotlib/seaborn** - Visualization
-
-**Model Serving:**
-- **TensorFlow Serving** or **TorchServe**
-- **FastAPI** - REST API wrapper
-- **Redis** - Model result caching
-
-**Experiment Tracking:**
-- **MLflow** - Experiment tracking, model registry
-- **Weights & Biases** - Training monitoring (optional)
-- **TensorBoard** - Training visualization
-
-**Data Management:**
-- **DVC (Data Version Control)** - Dataset versioning
-- **Label Studio** - Data annotation
-- **Augly** - Data augmentation
+### Storage & Database
+- **Supabase Storage** — Image uploads with IPFS pinning for permanent records
+- **Supabase PostgreSQL + PostGIS** — Submission records and spatial data
+- **Supabase Realtime** — Live submission status updates to frontend
 
 ---
 
-## 4. Model 1: Waste Classification
+## 4. Dataset
 
-### **4.1 Objective**
-Classify waste images into 5 categories: plastic, paper, metal, organic, electronic with >85% accuracy and <30 second inference time.
+### 4.1 Sources
 
-### **4.2 Model Architecture**
+| Source | Images | Notes |
+|---|---|---|
+| TrashNet | 2,527 | 6 classes, clean labels |
+| TACO | 15,000 | Real-world context images |
+| Kaggle Waste Classification | 5,000 | High quality, balanced |
+| Custom collection | 3,473 | Staged + partner recycling centers |
+| **Total** | **26,000** | |
 
-**Base Model:** Transfer Learning with MobileNetV3-Large or EfficientNet-B0
+### 4.2 Class Distribution
 
-**Choice Rationale:**
-- **MobileNetV3-Large**: Fast inference (40ms), good accuracy (75% ImageNet top-1)
-- **EfficientNet-B0**: Better accuracy (77% ImageNet top-1), slightly slower (60ms)
+```
+Plastic:   8,000 images  (bottles, bags, containers, packaging)
+Paper:     6,500 images  (cardboard, newspapers, boxes)
+Metal:     5,000 images  (cans, foil, scrap)
+Organic:   4,500 images  (food waste, yard waste, compost)
+Glass:     2,000 images  (bottles, jars)
+Total:    26,000 images
+```
 
-**Recommendation for MVP:** MobileNetV3-Large for speed, upgrade to EfficientNet post-MVP if accuracy insufficient.
+> **Note:** Electronic waste removed from MVP scope — insufficient data for reliable classification. Added in Phase 4 post-MVP expansion.
+
+### 4.3 Train / Val / Test Split
+
+```
+Training:    80%  ->  20,800 images
+Validation:  10%  ->   2,600 images
+Test:        10%  ->   2,600 images
+```
+
+---
+
+## 5. Model: Waste Classifier
+
+### 5.1 Architecture
+
+**Base Model:** EfficientNetB0 (pretrained on ImageNet)
+
+**Why EfficientNetB0 over MobileNetV3:**
+- Higher accuracy ceiling (77% vs 75% ImageNet top-1)
+- ~20MB model size — fits comfortably in TFLite for mobile
+- Sufficient speed for async Supabase Edge Function calls
+- Better generalizes to real-world recycling photos with varied backgrounds
+
+### 5.2 Full Training Script (Google Colab Pro)
 
 ```python
-# TensorFlow Implementation
+# Install
+!pip install tensorflow albumentations scikit-learn mlflow dagshub dvc imagehash
+
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras import layers, models, optimizers
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import numpy as np
+import mlflow
+import mlflow.tensorflow
 
-def create_waste_classifier(
-    num_classes=5,
-    input_shape=(224, 224, 3),
-    base_model_name='MobileNetV3Large'
-):
-    # Load pre-trained base model
-    if base_model_name == 'MobileNetV3Large':
-        base_model = tf.keras.applications.MobileNetV3Large(
-            input_shape=input_shape,
-            include_top=False,
-            weights='imagenet'
-        )
-    elif base_model_name == 'EfficientNetB0':
-        base_model = tf.keras.applications.EfficientNetB0(
-            input_shape=input_shape,
-            include_top=False,
-            weights='imagenet'
-        )
-    
-    # Freeze base model initially
-    base_model.trainable = False
-    
-    # Build classification head
-    inputs = layers.Input(shape=input_shape, name='image_input')
-    x = base_model(inputs, training=False)
-    x = layers.GlobalAveragePooling2D(name='global_avg_pool')(x)
-    x = layers.Dropout(0.3, name='dropout_1')(x)
-    x = layers.Dense(256, activation='relu', name='dense_1')(x)
-    x = layers.BatchNormalization(name='batch_norm_1')(x)
-    x = layers.Dropout(0.2, name='dropout_2')(x)
-    
-    # Output layer with softmax
-    outputs = layers.Dense(num_classes, activation='softmax', name='predictions')(x)
-    
-    model = models.Model(inputs, outputs, name='waste_classifier')
-    
-    return model, base_model
+# MLflow + DagsHub setup
+import dagshub
+dagshub.init(repo_owner="satsverdant", repo_name="satsverdant-ml", mlflow=True)
+# This sets mlflow.set_tracking_uri() to your DagsHub MLflow server automatically
 
-# Create model
-model, base_model = create_waste_classifier()
+mlflow.set_experiment("waste-classifier-efficientnetb0")
 
-# Compile
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
-    loss='categorical_crossentropy',
-    metrics=['accuracy', tf.keras.metrics.TopKCategoricalAccuracy(k=2, name='top_2_accuracy')]
+# Config
+IMG_SIZE     = 224
+BATCH_SIZE   = 32
+EPOCHS_P1    = 10    # frozen base
+EPOCHS_P2    = 20    # fine-tuning
+NUM_CLASSES  = 5
+DATASET_DIR  = "/content/drive/MyDrive/satsverdant/dataset"
+MODEL_SAVE   = "/content/drive/MyDrive/satsverdant/waste_classifier.h5"
+TFLITE_SAVE  = "/content/drive/MyDrive/satsverdant/waste_classifier.tflite"
+RUN_NAME     = f"efficientnetb0-b{BATCH_SIZE}-ep{EPOCHS_P1}p1-ep{EPOCHS_P2}p2"
+
+# Data Augmentation
+# Critical: real recycling photos vary hugely in angle, lighting, background
+train_datagen = ImageDataGenerator(
+    rescale=1./255, rotation_range=40,
+    width_shift_range=0.2, height_shift_range=0.2,
+    shear_range=0.2, zoom_range=0.3,
+    horizontal_flip=True, vertical_flip=True,
+    brightness_range=[0.7, 1.3], channel_shift_range=30.0, fill_mode='nearest'
+)
+val_datagen = ImageDataGenerator(rescale=1./255)
+
+train_gen = train_datagen.flow_from_directory(
+    f"{DATASET_DIR}/train", target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE, class_mode='categorical'
+)
+val_gen = val_datagen.flow_from_directory(
+    f"{DATASET_DIR}/val", target_size=(IMG_SIZE, IMG_SIZE),
+    batch_size=BATCH_SIZE, class_mode='categorical'
 )
 
-model.summary()
-```
-
-**Model Summary:**
-```
-Total params: 5,483,032
-Trainable params: 1,326,088
-Non-trainable params: 4,156,944
-```
-
-### **4.3 Dataset Requirements**
-
-**Minimum Dataset Size (MVP):**
-```
-Plastic:     5,000 images (bottles, bags, containers, packaging)
-Paper:       4,000 images (cardboard, newspapers, documents, boxes)
-Metal:       3,000 images (cans, foil, scrap metal)
-Organic:     2,000 images (food waste, yard waste, compost)
-Electronic:  1,000 images (phones, cables, batteries) [optional for MVP]
-
-Total:      15,000 images minimum
-```
-
-**Ideal Dataset Size (Post-MVP):**
-```
-Each category: 10,000+ images
-Total:        50,000+ images
-```
-
-**Data Sources:**
-1. **Public Datasets:**
-   - TrashNet (2,527 images, 6 classes)
-   - TACO (Trash Annotations in Context) - 15,000 images
-   - Waste Classification Data (Kaggle)
-   - OpenImages subset (search: "plastic bottle", "cardboard", etc.)
-
-2. **Custom Collection:**
-   - Beta users submissions
-   - Staged photo collection (controlled environment)
-   - Partner with recycling centers
-
-3. **Synthetic Data:**
-   - 3D rendering of waste items
-   - Background augmentation
-   - Cutout/paste augmentation
-
-**Data Split:**
-```
-Training:    70% (10,500 images)
-Validation:  15% (2,250 images)
-Test:        15% (2,250 images)
-```
-
-### **4.4 Data Preprocessing Pipeline**
-
-```python
-import cv2
-import numpy as np
-from PIL import Image
-import albumentations as A
-
-class WasteImagePreprocessor:
-    def __init__(self, target_size=(224, 224)):
-        self.target_size = target_size
-        
-        # Training augmentation pipeline
-        self.train_transform = A.Compose([
-            A.Resize(target_size[0], target_size[1]),
-            A.HorizontalFlip(p=0.5),
-            A.VerticalFlip(p=0.2),
-            A.Rotate(limit=30, p=0.5),
-            A.RandomBrightnessContrast(p=0.3),
-            A.GaussianBlur(blur_limit=(3, 7), p=0.2),
-            A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
-            A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.2, rotate_limit=15, p=0.5),
-            A.CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.3),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        
-        # Validation/Test augmentation (minimal)
-        self.val_transform = A.Compose([
-            A.Resize(target_size[0], target_size[1]),
-            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-    
-    def preprocess_image(self, image_path_or_bytes, mode='train'):
-        # Load image
-        if isinstance(image_path_or_bytes, str):
-            image = cv2.imread(image_path_or_bytes)
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        else:
-            image = cv2.imdecode(
-                np.frombuffer(image_path_or_bytes, np.uint8),
-                cv2.IMREAD_COLOR
-            )
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Apply transformations
-        if mode == 'train':
-            transformed = self.train_transform(image=image)
-        else:
-            transformed = self.val_transform(image=image)
-        
-        return transformed['image']
-    
-    def preprocess_batch(self, image_paths, mode='train'):
-        images = []
-        for path in image_paths:
-            img = self.preprocess_image(path, mode)
-            images.append(img)
-        return np.array(images)
-
-# Usage
-preprocessor = WasteImagePreprocessor(target_size=(224, 224))
-processed_image = preprocessor.preprocess_image('waste_photo.jpg', mode='inference')
-```
-
-### **4.5 Training Strategy**
-
-**Phase 1: Transfer Learning (Frozen Base)**
-```python
-# Freeze base model, train only classification head
+# Model Architecture
+base_model = EfficientNetB0(weights='imagenet', include_top=False,
+                             input_shape=(IMG_SIZE, IMG_SIZE, 3))
 base_model.trainable = False
 
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
+inputs  = layers.Input(shape=(IMG_SIZE, IMG_SIZE, 3))
+x       = base_model(inputs, training=False)
+x       = layers.GlobalAveragePooling2D()(x)
+x       = layers.BatchNormalization()(x)
+x       = layers.Dense(256, activation='relu')(x)
+x       = layers.Dropout(0.4)(x)
+outputs = layers.Dense(NUM_CLASSES, activation='softmax')(x)
+model   = models.Model(inputs, outputs, name='satsverdant_waste_classifier')
 
-history_phase1 = model.fit(
-    train_dataset,
-    epochs=10,
-    validation_data=val_dataset,
-    callbacks=[
-        tf.keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True),
-        tf.keras.callbacks.ReduceLROnPlateau(factor=0.5, patience=2),
-        tf.keras.callbacks.ModelCheckpoint('models/waste_classifier_phase1.h5', save_best_only=True)
-    ]
-)
-```
+# Phase 1: Train classifier head only (frozen base)
+model.compile(optimizer=optimizers.Adam(learning_rate=1e-3),
+              loss='categorical_crossentropy', metrics=['accuracy'])
 
-**Phase 2: Fine-Tuning (Unfreeze Top Layers)**
-```python
-# Unfreeze top 20% of base model layers
+callbacks_p1 = [
+    EarlyStopping(patience=4, restore_best_weights=True),
+    ReduceLROnPlateau(factor=0.5, patience=2, min_lr=1e-7),
+    ModelCheckpoint(MODEL_SAVE, save_best_only=True, monitor='val_accuracy'),
+    WandbCallback()
+]
+
+print("Phase 1: Frozen base training")
+model.fit(train_gen, epochs=EPOCHS_P1, validation_data=val_gen, callbacks=callbacks_p1)
+
+# Phase 2: Fine-tune top 30 layers
 base_model.trainable = True
 for layer in base_model.layers[:-30]:
     layer.trainable = False
 
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),  # Lower LR for fine-tuning
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
+model.compile(optimizer=optimizers.Adam(learning_rate=1e-5),
+              loss='categorical_crossentropy', metrics=['accuracy'])
 
-history_phase2 = model.fit(
-    train_dataset,
-    epochs=15,
-    validation_data=val_dataset,
-    callbacks=[
-        tf.keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
-        tf.keras.callbacks.ReduceLROnPlateau(factor=0.3, patience=3),
-        tf.keras.callbacks.ModelCheckpoint('models/waste_classifier_final.h5', save_best_only=True)
-    ]
-)
+callbacks_p2 = [
+    EarlyStopping(patience=6, restore_best_weights=True),
+    ReduceLROnPlateau(factor=0.3, patience=3, min_lr=1e-8),
+    ModelCheckpoint(MODEL_SAVE, save_best_only=True, monitor='val_accuracy'),
+    WandbCallback()
+]
+
+print("Phase 2: Fine-tuning top 30 layers")
+model.fit(train_gen, epochs=EPOCHS_P2, validation_data=val_gen, callbacks=callbacks_p2)
+
+# Evaluate
+val_loss, val_acc = model.evaluate(val_gen)
+print(f"\nFinal Validation Accuracy: {val_acc:.2%}")
+print("TARGET MET (>80%)!" if val_acc >= 0.80 else "Below 80% - iterate")
+wandb.log({"final_val_accuracy": val_acc})
+
+# Export: H5 (backend) + TFLite (mobile)
+model.save(MODEL_SAVE)
+print(f"H5 model saved -> {MODEL_SAVE}")
+
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+converter.optimizations = [tf.lite.Optimize.DEFAULT]
+converter.target_spec.supported_types = [tf.float16]
+tflite_model = converter.convert()
+
+with open(TFLITE_SAVE, 'wb') as f:
+    f.write(tflite_model)
+print(f"TFLite model saved -> {TFLITE_SAVE}")
 ```
 
-**Training Hyperparameters:**
-```python
-HYPERPARAMETERS = {
-    'batch_size': 32,
-    'initial_lr': 1e-3,
-    'fine_tune_lr': 1e-4,
-    'phase1_epochs': 10,
-    'phase2_epochs': 15,
-    'dropout_rate': 0.3,
-    'dense_units': 256,
-    'weight_decay': 1e-4
-}
-```
+### 5.3 Expected Training Results
 
-### **4.6 Evaluation Metrics**
+| Metric | Phase 1 (frozen) | Phase 2 (fine-tuned) |
+|---|---|---|
+| Training time (A100) | ~45 min | ~90 min |
+| Val accuracy | 72-78% | **82-88%** |
+| Model size (.h5) | ~20MB | ~20MB |
+| TFLite size | — | ~5MB |
+| Groq inference speed | — | ~50ms/image |
 
-```python
-from sklearn.metrics import (
-    accuracy_score, precision_recall_fscore_support,
-    confusion_matrix, classification_report
-)
-import seaborn as sns
-import matplotlib.pyplot as plt
+### 5.4 If Accuracy Falls Below 80%
 
-class WasteClassifierEvaluator:
-    def __init__(self, model, test_dataset, class_names):
-        self.model = model
-        self.test_dataset = test_dataset
-        self.class_names = class_names
-    
-    def evaluate(self):
-        # Predictions
-        y_true = []
-        y_pred = []
-        y_pred_proba = []
-        
-        for images, labels in self.test_dataset:
-            predictions = self.model.predict(images, verbose=0)
-            y_pred_proba.extend(predictions)
-            y_pred.extend(np.argmax(predictions, axis=1))
-            y_true.extend(np.argmax(labels, axis=1))
-        
-        y_true = np.array(y_true)
-        y_pred = np.array(y_pred)
-        y_pred_proba = np.array(y_pred_proba)
-        
-        # Metrics
-        accuracy = accuracy_score(y_true, y_pred)
-        precision, recall, f1, _ = precision_recall_fscore_support(
-            y_true, y_pred, average='weighted'
-        )
-        
-        # Confusion Matrix
-        cm = confusion_matrix(y_true, y_pred)
-        
-        # Per-class metrics
-        report = classification_report(
-            y_true, y_pred,
-            target_names=self.class_names,
-            output_dict=True
-        )
-        
-        return {
-            'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1,
-            'confusion_matrix': cm,
-            'classification_report': report,
-            'predictions': y_pred,
-            'probabilities': y_pred_proba,
-            'true_labels': y_true
-        }
-    
-    def plot_confusion_matrix(self, cm):
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(
-            cm, annot=True, fmt='d', cmap='Blues',
-            xticklabels=self.class_names,
-            yticklabels=self.class_names
-        )
-        plt.title('Confusion Matrix')
-        plt.ylabel('True Label')
-        plt.xlabel('Predicted Label')
-        plt.tight_layout()
-        plt.savefig('confusion_matrix.png')
-        plt.close()
-    
-    def plot_per_class_metrics(self, report):
-        classes = list(report.keys())[:-3]  # Exclude avg metrics
-        precisions = [report[c]['precision'] for c in classes]
-        recalls = [report[c]['recall'] for c in classes]
-        f1_scores = [report[c]['f1-score'] for c in classes]
-        
-        x = np.arange(len(classes))
-        width = 0.25
-        
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.bar(x - width, precisions, width, label='Precision')
-        ax.bar(x, recalls, width, label='Recall')
-        ax.bar(x + width, f1_scores, width, label='F1-Score')
-        
-        ax.set_xlabel('Waste Type')
-        ax.set_ylabel('Score')
-        ax.set_title('Per-Class Performance Metrics')
-        ax.set_xticks(x)
-        ax.set_xticklabels(classes)
-        ax.legend()
-        plt.tight_layout()
-        plt.savefig('per_class_metrics.png')
-        plt.close()
+Try these in order before a full retraining run:
 
-# Usage
-evaluator = WasteClassifierEvaluator(
-    model=model,
-    test_dataset=test_dataset,
-    class_names=['plastic', 'paper', 'metal', 'organic', 'electronic']
-)
-results = evaluator.evaluate()
-evaluator.plot_confusion_matrix(results['confusion_matrix'])
-evaluator.plot_per_class_metrics(results['classification_report'])
-```
-
-**Target Metrics (MVP):**
-```
-Overall Accuracy:    ≥ 85%
-Per-Class Precision: ≥ 80%
-Per-Class Recall:    ≥ 80%
-Inference Time:      < 1 second (CPU)
-                     < 100ms (GPU)
-```
-
-### **4.7 Inference Pipeline**
-
-```python
-class WasteClassificationInference:
-    def __init__(self, model_path, threshold=0.7):
-        self.model = tf.keras.models.load_model(model_path)
-        self.preprocessor = WasteImagePreprocessor()
-        self.threshold = threshold
-        self.class_names = ['plastic', 'paper', 'metal', 'organic', 'electronic']
-    
-    def classify(self, image_bytes):
-        # Preprocess
-        processed_image = self.preprocessor.preprocess_image(
-            image_bytes, mode='inference'
-        )
-        processed_image = np.expand_dims(processed_image, axis=0)
-        
-        # Predict
-        predictions = self.model.predict(processed_image, verbose=0)[0]
-        
-        # Get top prediction
-        class_idx = np.argmax(predictions)
-        confidence = float(predictions[class_idx])
-        waste_type = self.class_names[class_idx]
-        
-        # Get top-2 for ambiguity detection
-        top_2_indices = np.argsort(predictions)[-2:][::-1]
-        top_2_probs = predictions[top_2_indices]
-        
-        # Check if confident
-        is_confident = confidence >= self.threshold
-        is_ambiguous = (top_2_probs[0] - top_2_probs[1]) < 0.15  # Close call
-        
-        return {
-            'waste_type': waste_type,
-            'confidence': confidence,
-            'all_probabilities': {
-                self.class_names[i]: float(predictions[i])
-                for i in range(len(self.class_names))
-            },
-            'is_confident': is_confident,
-            'is_ambiguous': is_ambiguous,
-            'top_2_classes': [self.class_names[i] for i in top_2_indices],
-            'top_2_probabilities': [float(p) for p in top_2_probs]
-        }
-
-# Usage
-classifier = WasteClassificationInference(
-    model_path='models/waste_classifier_final.h5',
-    threshold=0.7
-)
-
-with open('waste_image.jpg', 'rb') as f:
-    image_bytes = f.read()
-
-result = classifier.classify(image_bytes)
-print(f"Type: {result['waste_type']}, Confidence: {result['confidence']:.2%}")
-```
+1. Increase augmentation — raise `rotation_range` to 45, add `CoarseDropout`
+2. Unfreeze more layers — change `[:-30]` to `[:-50]` in Phase 2
+3. Lower learning rate — try `5e-6` for Phase 2
+4. Add class weights for Glass (fewest images) via `class_weight` in `model.fit()`
+5. Upgrade to EfficientNetB3 — higher accuracy ceiling, ~2x training time
 
 ---
 
-## 5. Model 2: Weight Estimation
+## 6. Groq Inference Integration
 
-### **5.1 Objective**
-Estimate weight of waste in kilograms from image with ±20% accuracy (RMSE < 0.2 kg for items 0.5-2kg).
+Groq is used for **production inference only — not training**. Once your `.h5` model is trained, Groq's LPU delivers ~10x faster inference than a standard CPU server at near-zero cost for MVP scale.
 
-### **5.2 Approach**
+### 6.1 Why Groq for Inference
 
-**MVP Approach:** Heuristic-based estimation (rule-based)
-**Post-MVP:** Regression model trained on labeled data
+| Option | Latency | Cost at 1K inferences/day | Notes |
+|---|---|---|---|
+| Self-hosted FastAPI (CPU) | ~800ms | Server cost | Complex infra |
+| Hugging Face Inference API | ~300ms | Free tier limited | Good fallback |
+| **Groq API** | **~50ms** | **~$0.01/day** | Best for MVP |
+| AWS SageMaker | ~200ms | $$$ | Overkill for MVP |
 
-**Heuristic Model (MVP):**
-```python
-class WeightEstimator:
-    def __init__(self):
-        # Base weights by waste type (in kg)
-        self.base_weights = {
-            'plastic': 0.5,    # Typical: plastic bottle
-            'paper': 1.0,      # Typical: stack of cardboard
-            'metal': 0.8,      # Typical: aluminum cans
-            'organic': 1.5,    # Typical: food waste bag
-            'electronic': 0.3  # Typical: phone/cable
-        }
-        
-        # Object count multipliers (if detected)
-        self.count_multipliers = {
-            1: 1.0,
-            2: 1.8,   # Slight efficiency
-            3: 2.5,
-            4: 3.2,
-            5: 4.0
-        }
-    
-    def estimate_weight(self, waste_type, image_metadata=None):
-        base_weight = self.base_weights.get(waste_type, 1.0)
-        
-        # Add random variance ±20%
-        variance = np.random.uniform(0.8, 1.2)
-        estimated_weight = base_weight * variance
-        
-        # If object count available (from object detection)
-        if image_metadata and 'object_count' in image_metadata:
-            count = min(image_metadata['object_count'], 5)
-            multiplier = self.count_multipliers.get(count, 1.0)
-            estimated_weight *= multiplier
-        
-        # Round to 1 decimal place
-        return round(estimated_weight, 1)
+### 6.2 Supabase Edge Function: `/classify`
 
-# Usage
-estimator = WeightEstimator()
-weight_kg = estimator.estimate_weight('plastic', {'object_count': 3})
-print(f"Estimated weight: {weight_kg} kg")
-```
+```typescript
+// supabase/functions/classify/index.ts
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-**Regression Model (Post-MVP):**
-```python
-import tensorflow as tf
+const GROQ_API_KEY  = Deno.env.get("GROQ_API_KEY")!;
+const RADAR_API_KEY = Deno.env.get("RADAR_API_KEY")!;
+const SUPABASE_URL  = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-def create_weight_regression_model(base_model_name='MobileNetV3Small'):
-    # Smaller base model for faster inference
-    base_model = tf.keras.applications.MobileNetV3Small(
-        input_shape=(224, 224, 3),
-        include_top=False,
-        weights='imagenet'
-    )
-    base_model.trainable = False
-    
-    inputs = layers.Input(shape=(224, 224, 3))
-    x = base_model(inputs, training=False)
-    x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dense(128, activation='relu')(x)
-    x = layers.Dropout(0.2)(x)
-    x = layers.Dense(64, activation='relu')(x)
-    
-    # Single output: weight in kg
-    outputs = layers.Dense(1, activation='linear', name='weight_output')(x)
-    
-    model = models.Model(inputs, outputs, name='weight_estimator')
-    
-    model.compile(
-        optimizer='adam',
-        loss='mse',
-        metrics=['mae', 'mape']  # Mean Absolute Error, Mean Absolute Percentage Error
-    )
-    
-    return model
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-# Training
-weight_model = create_weight_regression_model()
-# Note: Requires labeled dataset with actual weights
-```
+serve(async (req) => {
+  try {
+    const { imageBase64, userId, latitude, longitude, deviceInfo } = await req.json();
 
----
-
-## 6. Model 3: Quality Grading
-
-### **6.1 Objective**
-Assign quality grade (A, B, C, D) based on image clarity, lighting, and waste condition.
-
-### **6.2 Implementation**
-
-```python
-import cv2
-
-class QualityGrader:
-    def __init__(self):
-        self.grade_thresholds = {
-            'A': {'blur_variance': 100, 'brightness': (50, 200), 'contrast': 40},
-            'B': {'blur_variance': 50, 'brightness': (30, 220), 'contrast': 25},
-            'C': {'blur_variance': 20, 'brightness': (20, 240), 'contrast': 15},
-            'D': {'blur_variance': 0, 'brightness': (0, 255), 'contrast': 0}
-        }
-    
-    def calculate_blur(self, image):
-        # Laplacian variance for blur detection
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-        return laplacian_var
-    
-    def calculate_brightness(self, image):
-        # Average brightness
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        return np.mean(gray)
-    
-    def calculate_contrast(self, image):
-        # Standard deviation as contrast measure
-        gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        return np.std(gray)
-    
-    def grade_image(self, image_bytes):
-        # Load image
-        image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Calculate metrics
-        blur_score = self.calculate_blur(image)
-        brightness = self.calculate_brightness(image)
-        contrast = self.calculate_contrast(image)
-        
-        # Determine grade
-        if (blur_score >= 100 and 
-            50 <= brightness <= 200 and 
-            contrast >= 40):
-            grade = 'A'
-        elif (blur_score >= 50 and 
-              30 <= brightness <= 220 and 
-              contrast >= 25):
-            grade = 'B'
-        elif (blur_score >= 20 and 
-              20 <= brightness <= 240 and 
-              contrast >= 15):
-            grade = 'C'
-        else:
-            grade = 'D'
-        
-        return {
-            'grade': grade,
-            'blur_score': float(blur_score),
-            'brightness': float(brightness),
-            'contrast': float(contrast),
-            'quality_details': {
-                'is_blurry': blur_score < 50,
-                'is_too_dark': brightness < 30,
-                'is_too_bright': brightness > 220,
-                'is_low_contrast': contrast < 25
-            }
-        }
-
-# Usage
-grader = QualityGrader()
-with open('waste_image.jpg', 'rb') as f:
-    image_bytes = f.read()
-
-quality = grader.grade_image(image_bytes)
-print(f"Quality Grade: {quality['grade']}")
-```
-
-**Quality Grading Criteria:**
-```
-Grade A (1.0x multiplier):
-  - Sharp image (blur variance > 100)
-  - Good lighting (brightness 50-200)
-  - High contrast (std > 40)
-  - Clear waste item visible
-
-Grade B (0.8x multiplier):
-  - Slightly blurry (blur variance 50-100)
-  - Acceptable lighting
-  - Medium contrast
-  
-Grade C (0.6x multiplier):
-  - Blurry (blur variance 20-50)
-  - Poor lighting
-  - Low contrast
-  
-Grade D (0.4x multiplier):
-  - Very blurry or unclear
-  - Cannot verify waste properly
-```
-
----
-
-## 7. Fraud Detection System
-
-### **7.1 Objective**
-Detect fraudulent submissions (duplicates, location spoofing, rapid submissions) with >90% precision to minimize false positives.
-
-### **7.2 Multi-Signal Detection**
-
-```python
-import imagehash
-from PIL import Image
-import hashlib
-from datetime import datetime, timedelta
-
-class FraudDetectionSystem:
-    def __init__(self, db_connection):
-        self.db = db_connection
-        
-        # Thresholds
-        self.duplicate_hash_threshold = 5
-        self.location_radius_meters = 50
-        self.rapid_submission_threshold = 5  # submissions per hour
-        self.low_confidence_threshold = 0.7
-        
-    # === 1. Image Duplicate Detection ===
-    def calculate_perceptual_hash(self, image_bytes):
-        """Calculate perceptual hash for near-duplicate detection"""
-        image = Image.open(io.BytesIO(image_bytes))
-        
-        # Multiple hash types for robustness
-        phash = imagehash.phash(image)
-        dhash = imagehash.dhash(image)
-        whash = imagehash.whash(image)
-        
-        return {
-            'phash': str(phash),
-            'dhash': str(dhash),
-            'whash': str(whash)
-        }
-    
-    def check_duplicate_image(self, user_id, image_hashes):
-        """Check if image is duplicate of previous submission"""
-        # Query recent submissions from same user
-        recent_submissions = self.db.query("""
-            SELECT id, image_phash, image_dhash, image_whash
-            FROM submissions
-            WHERE user_id = %s
-              AND created_at > NOW() - INTERVAL '30 days'
-              AND image_phash IS NOT NULL
-        """, (user_id,))
-        
-        for sub in recent_submissions:
-            # Calculate hash distances
-            phash_dist = imagehash.hex_to_hash(image_hashes['phash']) - \
-                        imagehash.hex_to_hash(sub['image_phash'])
-            dhash_dist = imagehash.hex_to_hash(image_hashes['dhash']) - \
-                        imagehash.hex_to_hash(sub['image_dhash'])
-            whash_dist = imagehash.hex_to_hash(image_hashes['whash']) - \
-                        imagehash.hex_to_hash(sub['image_whash'])
-            
-            # Average distance
-            avg_distance = (phash_dist + dhash_dist + whash_dist) / 3
-            
-            if avg_distance < self.duplicate_hash_threshold:
-                return {
-                    'is_duplicate': True,
-                    'duplicate_of': sub['id'],
-                    'similarity_score': 1 - (avg_distance / 64),  # Normalize to 0-1
-                    'hash_distance': float(avg_distance)
-                }
-        
-        return {'is_duplicate': False}
-    
-    # === 2. Location Clustering Detection ===
-    def haversine_distance(self, lat1, lon1, lat2, lon2):
-        """Calculate distance between two GPS coordinates in meters"""
-        from math import radians, cos, sin, asin, sqrt
-        
-        # Convert to radians
-        lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-        
-        # Haversine formula
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-        c = 2 * asin(sqrt(a))
-        
-        # Radius of earth in meters
-        r = 6371000
-        return c * r
-    
-    def check_location_clustering(self, user_id, latitude, longitude):
-        """Detect if too many submissions from same location"""
-        recent_locations = self.db.query("""
-            SELECT latitude, longitude, created_at
-            FROM submissions
-            WHERE user_id = %s
-              AND latitude IS NOT NULL
-              AND created_at > NOW() - INTERVAL '7 days'
-        """, (user_id,))
-        
-        same_location_count = 0
-        for loc in recent_locations:
-            distance = self.haversine_distance(
-                latitude, longitude,
-                loc['latitude'], loc['longitude']
-            )
-            
-            if distance < self.location_radius_meters:
-                same_location_count += 1
-        
-        if same_location_count > 5:
-            return {
-                'flag': 'location_clustering',
-                'severity': 'medium',
-                'same_location_submissions': same_location_count,
-                'description': f'{same_location_count} submissions within 50m in past 7 days'
-            }
-        
-        return None
-    
-    # === 3. Rapid Submission Detection ===
-    def check_rapid_submissions(self, user_id):
-        """Detect suspiciously rapid submissions"""
-        recent_count = self.db.query("""
-            SELECT COUNT(*) as count
-            FROM submissions
-            WHERE user_id = %s
-              AND created_at > NOW() - INTERVAL '1 hour'
-        """, (user_id,)).fetchone()
-        
-        if recent_count['count'] >= self.rapid_submission_threshold:
-            return {
-                'flag': 'rapid_submission',
-                'severity': 'high',
-                'submissions_last_hour': recent_count['count'],
-                'description': f'{recent_count["count"]} submissions in past hour (threshold: {self.rapid_submission_threshold})'
-            }
-        
-        return None
-    
-    # === 4. Low Confidence Pattern Detection ===
-    def check_low_confidence_pattern(self, user_id, current_confidence):
-        """Detect pattern of low-confidence submissions"""
-        low_conf_count = self.db.query("""
-            SELECT COUNT(*) as count
-            FROM submissions
-            WHERE user_id = %s
-              AND ai_confidence < %s
-              AND created_at > NOW() - INTERVAL '7 days'
-        """, (user_id, self.low_confidence_threshold)).fetchone()
-        
-        if low_conf_count['count'] >= 3 and current_confidence < self.low_confidence_threshold:
-            return {
-                'flag': 'low_confidence_pattern',
-                'severity': 'low',
-                'low_confidence_count': low_conf_count['count'],
-                'description': f'{low_conf_count["count"]} low-confidence submissions in 7 days'
-            }
-        
-        return None
-    
-    # === 5. Device Fingerprinting ===
-    def check_device_fingerprint(self, user_id, device_info):
-        """Check if device fingerprint matches multiple accounts"""
-        device_hash = hashlib.sha256(
-            f"{device_info.get('model', '')}{device_info.get('os', '')}".encode()
-        ).hexdigest()
-        
-        account_count = self.db.query("""
-            SELECT COUNT(DISTINCT user_id) as count
-            FROM submissions
-            WHERE device_info->>'fingerprint' = %s
-              AND created_at > NOW() - INTERVAL '30 days'
-        """, (device_hash,)).fetchone()
-        
-        if account_count['count'] > 3:
-            return {
-                'flag': 'multiple_accounts',
-                'severity': 'critical',
-                'account_count': account_count['count'],
-                'description': f'Device fingerprint linked to {account_count["count"]} accounts'
-            }
-        
-        return None
-    
-    # === 6. Composite Fraud Score ===
-    def calculate_fraud_score(self, submission_data):
-        """Calculate overall fraud score (0-1)"""
-        flags = []
-        score = 0.0
-        
-        # Check all signals
-        user_id = submission_data['user_id']
-        
-        # 1. Duplicate image (weight: 0.5)
-        image_hashes = self.calculate_perceptual_hash(submission_data['image_bytes'])
-        duplicate_check = self.check_duplicate_image(user_id, image_hashes)
-        if duplicate_check['is_duplicate']:
-            score += 0.5 * duplicate_check['similarity_score']
-            flags.append({
-                'type': 'duplicate_image',
-                'severity': 'high',
-                'details': duplicate_check
-            })
-        
-        # 2. Location clustering (weight: 0.2)
-        if submission_data.get('latitude') and submission_data.get('longitude'):
-            location_flag = self.check_location_clustering(
-                user_id,
-                submission_data['latitude'],
-                submission_data['longitude']
-            )
-            if location_flag:
-                score += 0.2
-                flags.append(location_flag)
-        
-        # 3. Rapid submissions (weight: 0.3)
-        rapid_flag = self.check_rapid_submissions(user_id)
-        if rapid_flag:
-            score += 0.3
-            flags.append(rapid_flag)
-        
-        # 4. Low confidence pattern (weight: 0.1)
-        if 'ai_confidence' in submission_data:
-            conf_flag = self.check_low_confidence_pattern(
-                user_id,
-                submission_data['ai_confidence']
-            )
-            if conf_flag:
-                score += 0.1
-                flags.append(conf_flag)
-        
-        # 5. Device fingerprint (weight: 0.4 - can exceed 1.0 for critical)
-        if submission_data.get('device_info'):
-            device_flag = self.check_device_fingerprint(
-                user_id,
-                submission_data['device_info']
-            )
-            if device_flag:
-                score += 0.4
-                flags.append(device_flag)
-        
-        # Cap at 1.0
-        score = min(score, 1.0)
-        
-        # Determine action
-        if score >= 0.8:
-            action = 'auto_reject'
-        elif score >= 0.5:
-            action = 'flag_for_manual_review'
-        elif score >= 0.3:
-            action = 'warning'
-        else:
-            action = 'approve'
-        
-        return {
-            'fraud_score': round(score, 3),
-            'flags': flags,
-            'recommended_action': action,
-            'image_hashes': image_hashes
-        }
-
-# Usage
-fraud_detector = FraudDetectionSystem(db_connection)
-
-submission_data = {
-    'user_id': 'user_123',
-    'image_bytes': image_bytes,
-    'latitude': 52.3676,
-    'longitude': 4.9041,
-    'ai_confidence': 0.65,
-    'device_info': {'model': 'iPhone 14', 'os': 'iOS 17'}
-}
-
-fraud_result = fraud_detector.calculate_fraud_score(submission_data)
-print(f"Fraud Score: {fraud_result['fraud_score']}")
-print(f"Action: {fraud_result['recommended_action']}")
-```
-
-### **7.3 Fraud Detection Metrics**
-
-**Target Performance:**
-```
-Precision:     ≥ 90% (minimize false positives)
-Recall:        ≥ 70% (catch most fraud)
-False Positive Rate: < 5%
-```
-
-**Monitoring:**
-```python
-class FraudDetectionMonitor:
-    def __init__(self, db_connection):
-        self.db = db_connection
-    
-    def calculate_metrics(self, time_period_days=30):
-        # Get flagged submissions and their outcomes
-        data = self.db.query("""
-            SELECT 
-                fraud_score,
-                status,
-                fraud_flags,
-                validator_decision
-            FROM submissions
-            WHERE created_at > NOW() - INTERVAL '%s days'
-              AND fraud_score > 0
-        """, (time_period_days,))
-        
-        # Calculate TP, FP, TN, FN
-        tp = fp = tn = fn = 0
-        
-        for row in data:
-            is_fraud_flagged = row['fraud_score'] >= 0.5
-            is_actually_fraud = row['validator_decision'] == 'rejected'
-            
-            if is_fraud_flagged and is_actually_fraud:
-                tp += 1
-            elif is_fraud_flagged and not is_actually_fraud:
-                fp += 1
-            elif not is_fraud_flagged and is_actually_fraud:
-                fn += 1
-            else:
-                tn += 1
-        
-        # Metrics
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-        fpr = fp / (fp + tn) if (fp + tn) > 0 else 0
-        
-        return {
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1,
-            'false_positive_rate': fpr,
-            'true_positives': tp,
-            'false_positives': fp,
-            'true_negatives': tn,
-            'false_negatives': fn
-        }
-```
-
----
-
-## 8. Complete Inference Pipeline
-
-### **8.1 Unified Classification Service**
-
-```python
-import time
-from typing import Dict, Any
-
-class SatsVerdantMLService:
-    """Unified ML service for waste classification, weight estimation, quality grading, and fraud detection"""
-    
-    def __init__(
-        self,
-        classifier_model_path: str,
-        db_connection,
-        confidence_threshold: float = 0.7
-    ):
-        # Load models
-        self.classifier = WasteClassificationInference(
-            classifier_model_path,
-            threshold=confidence_threshold
-        )
-        self.weight_estimator = WeightEstimator()
-        self.quality_grader = QualityGrader()
-        self.fraud_detector = FraudDetectionSystem(db_connection)
-        
-        # Performance tracking
-        self.inference_times = []
-    
-    def process_submission(
-        self,
-        image_bytes: bytes,
-        user_id: str,
-        latitude: float = None,
-        longitude: float = None,
-        device_info: Dict = None
-    ) -> Dict[str, Any]:
-        """
-        Complete ML pipeline for waste submission processing
-        
-        Returns:
-            Complete classification result with fraud analysis
-        """
-        start_time = time.time()
-        
-        try:
-            # 1. Image Quality Grading
-            quality_start = time.time()
-            quality_result = self.quality_grader.grade_image(image_bytes)
-            quality_time = time.time() - quality_start
-            
-            # 2. Waste Classification
-            classification_start = time.time()
-            classification_result = self.classifier.classify(image_bytes)
-            classification_time = time.time() - classification_start
-            
-            # 3. Weight Estimation
-            weight_start = time.time()
-            estimated_weight = self.weight_estimator.estimate_weight(
-                classification_result['waste_type']
-            )
-            weight_time = time.time() - weight_start
-            
-            # 4. Fraud Detection
-            fraud_start = time.time()
-            fraud_result = self.fraud_detector.calculate_fraud_score({
-                'user_id': user_id,
-                'image_bytes': image_bytes,
-                'latitude': latitude,
-                'longitude': longitude,
-                'ai_confidence': classification_result['confidence'],
-                'device_info': device_info
-            })
-            fraud_time = time.time() - fraud_start
-            
-            # Total inference time
-            total_time = time.time() - start_time
-            self.inference_times.append(total_time)
-            
-            # Combine results
-            result = {
-                'classification': {
-                    'waste_type': classification_result['waste_type'],
-                    'confidence': classification_result['confidence'],
-                    'is_confident': classification_result['is_confident'],
-                    'is_ambiguous': classification_result['is_ambiguous'],
-                    'all_probabilities': classification_result['all_probabilities']
-                },
-                'weight_estimation': {
-                    'estimated_weight_kg': estimated_weight
-                },
-                'quality': {
-                    'grade': quality_result['grade'],
-                    'blur_score': quality_result['blur_score'],
-                    'brightness': quality_result['brightness'],
-                    'contrast': quality_result['contrast'],
-                    'quality_details': quality_result['quality_details']
-                },
-                'fraud_analysis': {
-                    'fraud_score': fraud_result['fraud_score'],
-                    'flags': fraud_result['flags'],
-                    'recommended_action': fraud_result['recommended_action']
-                },
-                'metadata': {
-                    'total_inference_time_seconds': round(total_time, 3),
-                    'classification_time_seconds': round(classification_time, 3),
-                    'quality_grading_time_seconds': round(quality_time, 3),
-                    'weight_estimation_time_seconds': round(weight_time, 3),
-                    'fraud_detection_time_seconds': round(fraud_time, 3),
-                    'model_version': '1.0.0',
-                    'timestamp': time.time()
-                },
-                'image_hashes': fraud_result['image_hashes']
-            }
-            
-            return {
-                'success': True,
-                'data': result
-            }
-            
-        except Exception as e:
-            return {
-                'success': False,
-                'error': str(e),
-                'error_type': type(e).__name__
-            }
-    
-    def get_performance_stats(self):
-        """Get inference performance statistics"""
-        if not self.inference_times:
-            return None
-        
-        return {
-            'mean_inference_time': np.mean(self.inference_times),
-            'median_inference_time': np.median(self.inference_times),
-            'p95_inference_time': np.percentile(self.inference_times, 95),
-            'p99_inference_time': np.percentile(self.inference_times, 99),
-            'min_inference_time': np.min(self.inference_times),
-            'max_inference_time': np.max(self.inference_times),
-            'total_inferences': len(self.inference_times)
-        }
-
-# Usage
-ml_service = SatsVerdantMLService(
-    classifier_model_path='models/waste_classifier_final.h5',
-    db_connection=db_conn,
-    confidence_threshold=0.7
-)
-
-# Process submission
-result = ml_service.process_submission(
-    image_bytes=image_bytes,
-    user_id='user_123',
-    latitude=52.3676,
-    longitude=4.9041,
-    device_info={'model': 'iPhone 14', 'os': 'iOS 17'}
-)
-
-if result['success']:
-    print(f"Classification: {result['data']['classification']['waste_type']}")
-    print(f"Confidence: {result['data']['classification']['confidence']:.2%}")
-    print(f"Weight: {result['data']['weight_estimation']['estimated_weight_kg']} kg")
-    print(f"Quality: {result['data']['quality']['grade']}")
-    print(f"Fraud Score: {result['data']['fraud_analysis']['fraud_score']:.3f}")
-    print(f"Inference Time: {result['data']['metadata']['total_inference_time_seconds']:.3f}s")
-```
-
----
-
-## 9. Model Deployment
-
-### **9.1 Model Serving Architecture**
-
-```python
-# FastAPI serving endpoint
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-
-app = FastAPI(title="SatsVerdant ML API", version="1.0.0")
-
-# Initialize ML service
-ml_service = SatsVerdantMLService(
-    classifier_model_path='/models/waste_classifier_final.h5',
-    db_connection=get_db_connection()
-)
-
-class SubmissionRequest(BaseModel):
-    user_id: str
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    device_info: Optional[dict] = None
-
-@app.post("/classify")
-async def classify_waste(
-    file: UploadFile = File(...),
-    user_id: str = Form(...),
-    latitude: Optional[float] = Form(None),
-    longitude: Optional[float] = Form(None)
-):
-    """Classify waste submission"""
-    
-    # Validate file type
-    if file.content_type not in ['image/jpeg', 'image/png', 'image/heic']:
-        raise HTTPException(400, "Invalid image format")
-    
-    # Read image
-    image_bytes = await file.read()
-    
-    # Validate file size (max 10MB)
-    if len(image_bytes) > 10 * 1024 * 1024:
-        raise HTTPException(413, "Image too large (max 10MB)")
-    
-    # Process
-    result = ml_service.process_submission(
-        image_bytes=image_bytes,
-        user_id=user_id,
-        latitude=latitude,
-        longitude=longitude
-    )
-    
-    if not result['success']:
-        raise HTTPException(500, f"Classification failed: {result['error']}")
-    
-    return result['data']
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
-        "model_loaded": ml_service.classifier.model is not None,
-        "version": "1.0.0"
+    // Step 1: Quality Gate
+    const quality = await checkImageQuality(imageBase64);
+    if (quality.grade === "D") {
+      return json({ success: false, reason: "Image quality too low. Please retake in better lighting." }, 400);
     }
 
-@app.get("/metrics")
-async def get_metrics():
-    """Get inference performance metrics"""
-    return ml_service.get_performance_stats()
+    // Step 2: Duplicate Detection
+    const imageHash   = await computeHash(imageBase64);
+    const isDuplicate = await checkDuplicate(userId, imageHash);
+    if (isDuplicate) {
+      return json({ success: false, reason: "Duplicate submission detected." }, 409);
+    }
 
-# Run with: uvicorn ml_api:app --host 0.0.0.0 --port 8001
-```
+    // Step 3: Radar.io Geofence Check
+    if (latitude && longitude) {
+      const geo = await verifyLocation(latitude, longitude);
+      if (!geo.isAtRecyclingPoint) {
+        return json({
+          success: false,
+          reason: "Must be at a registered recycling location.",
+          nearestLocation: geo.nearestLocation
+        }, 403);
+      }
+    }
 
-### **9.2 Docker Deployment**
+    // Step 4: Groq Classification
+    const classification = await classifyWithGroq(imageBase64);
 
-```dockerfile
-# Dockerfile.ml
-FROM python:3.11-slim
+    // Step 5: Fraud Score
+    const fraudScore = await getFraudScore(userId, classification.confidence);
 
-WORKDIR /app
+    // Step 6: Persist to Supabase
+    const { data: submission } = await supabase
+      .from("submissions")
+      .insert({
+        user_id: userId, waste_type: classification.wasteType,
+        ai_confidence: classification.confidence, quality_grade: quality.grade,
+        image_hash: imageHash, latitude, longitude,
+        fraud_score: fraudScore,
+        status: fraudScore > 0.5 ? "flagged" : "approved",
+        device_info: deviceInfo
+      })
+      .select().single();
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+    // Step 7: Trigger reward if approved
+    if (submission.status === "approved" && classification.confidence >= 0.7) {
+      await supabase.from("reward_queue").insert({
+        user_id: userId, waste_type: classification.wasteType,
+        submission_id: submission.id, status: "pending"
+      });
+    }
 
-# Install Python dependencies
-COPY requirements-ml.txt .
-RUN pip install --no-cache-dir -r requirements-ml.txt
+    return json({
+      success: true, submissionId: submission.id,
+      wasteType: classification.wasteType, confidence: classification.confidence,
+      qualityGrade: quality.grade, status: submission.status,
+      rewardTriggered: submission.status === "approved"
+    });
 
-# Copy models and code
-COPY models/ ./models/
-COPY ml/ ./ml/
+  } catch (err) {
+    return json({ success: false, error: err.message }, 500);
+  }
+});
 
-# Expose port
-EXPOSE 8001
+// Groq: Vision classification
+async function classifyWithGroq(imageBase64: string) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "llama-3.2-11b-vision-preview",
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBase64}` } },
+          { type: "text", text: `Classify this waste image. Respond ONLY with valid JSON:
+{
+  "wasteType": "<plastic|paper|metal|organic|glass>",
+  "confidence": <0.0-1.0>,
+  "reasoning": "<one sentence>"
+}` }
+        ]
+      }],
+      max_tokens: 150, temperature: 0.1
+    })
+  });
+  const data = await res.json();
+  const text = data.choices[0].message.content.replace(/```json|```/g, "").trim();
+  return JSON.parse(text);
+}
 
-# Run
-CMD ["uvicorn", "ml.api:app", "--host", "0.0.0.0", "--port", "8001"]
-```
+// Radar.io: Geofence verification
+async function verifyLocation(lat: number, lng: number) {
+  const res   = await fetch(
+    `https://api.radar.io/v1/geofences/nearby?coordinates=${lat},${lng}&radius=100`,
+    { headers: { "Authorization": RADAR_API_KEY } }
+  );
+  const data  = await res.json();
+  const fences = (data.geofences ?? []).filter((f: any) => f.tag === "recycling_point");
+  return { isAtRecyclingPoint: fences.length > 0, nearestLocation: fences[0]?.description ?? null };
+}
 
-```yaml
-# docker-compose.ml.yml
-version: '3.8'
+// Hash: Duplicate detection
+async function computeHash(imageBase64: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(imageBase64), c => c.charCodeAt(0));
+  const hash  = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
 
-services:
-  ml-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.ml
-    ports:
-      - "8001:8001"
-    environment:
-      - MODEL_PATH=/app/models/waste_classifier_final.h5
-      - DB_URL=postgresql://user:pass@db:5432/satsverdant
-    volumes:
-      - ./models:/app/models:ro
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]  # Optional: for GPU acceleration
-```
+async function checkDuplicate(userId: string, hash: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("submissions").select("id").eq("user_id", userId).eq("image_hash", hash)
+    .gte("created_at", new Date(Date.now() - 30*24*60*60*1000).toISOString()).limit(1);
+  return (data?.length ?? 0) > 0;
+}
 
-### **9.3 Model Optimization**
+// Fraud Score
+async function getFraudScore(userId: string, confidence: number): Promise<number> {
+  const { count } = await supabase
+    .from("submissions").select("*", { count: "exact", head: true }).eq("user_id", userId)
+    .gte("created_at", new Date(Date.now() - 60*60*1000).toISOString());
+  let score = 0;
+  if ((count ?? 0) >= 5) score += 0.4;
+  if (confidence < 0.6)  score += 0.3;
+  return Math.min(score, 1.0);
+}
 
-**TensorFlow Lite Conversion (for mobile):**
-```python
-import tensorflow as tf
-
-def convert_to_tflite(model_path, output_path):
-    # Load model
-    model = tf.keras.models.load_model(model_path)
-    
-    # Convert to TFLite
-    converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    
-    # Optimization
-    converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    converter.target_spec.supported_types = [tf.float16]  # Use FP16
-    
-    # Convert
-    tflite_model = converter.convert()
-    
-    # Save
-    with open(output_path, 'wb') as f:
-        f.write(tflite_model)
-    
-    print(f"Model converted to TFLite: {output_path}")
-    print(f"Size reduction: {os.path.getsize(model_path) / os.path.getsize(output_path):.2f}x")
-
-# Convert
-convert_to_tflite(
-    'models/waste_classifier_final.h5',
-    'models/waste_classifier_mobile.tflite'
-)
-```
-
-**ONNX Conversion (for cross-platform):**
-```python
-import tf2onnx
-import onnx
-
-def convert_to_onnx(model_path, output_path):
-    model = tf.keras.models.load_model(model_path)
-    
-    # Convert
-    onnx_model, _ = tf2onnx.convert.from_keras(
-        model,
-        input_signature=[tf.TensorSpec(shape=[None, 224, 224, 3], dtype=tf.float32)],
-        opset=13
-    )
-    
-    # Save
-    onnx.save(onnx_model, output_path)
-    print(f"Model converted to ONNX: {output_path}")
-
-convert_to_onnx(
-    'models/waste_classifier_final.h5',
-    'models/waste_classifier.onnx'
-)
+function json(data: object, status = 200) {
+  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+}
 ```
 
 ---
 
-## 10. Monitoring & Maintenance
+## 7. Location Verification: Supabase PostGIS + Radar.io
 
-### **10.1 Model Performance Monitoring**
+### 7.1 Why Both
+
+| Tool | Role |
+|---|---|
+| **Supabase PostGIS** | Store recycling point coordinates, spatial queries, "find nearest" feature |
+| **Radar.io Geofencing** | Real-time verify user is physically present at a recycling point at submission time |
+
+PostGIS manages your data layer. Radar.io handles live event verification. They are complementary, not redundant.
+
+### 7.2 Supabase PostGIS Setup
+
+```sql
+-- Enable PostGIS (natively supported in Supabase)
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+-- Recycling locations table
+CREATE TABLE recycling_locations (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           TEXT NOT NULL,
+  address        TEXT,
+  coordinates    GEOGRAPHY(POINT, 4326) NOT NULL,
+  waste_types    TEXT[] DEFAULT '{}',
+  radar_fence_id TEXT,
+  is_active      BOOLEAN DEFAULT true,
+  created_at     TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_recycling_locations_geo
+  ON recycling_locations USING GIST(coordinates);
+
+-- Find recycling points within 100m of user
+CREATE OR REPLACE FUNCTION nearby_recycling_points(
+  user_lat FLOAT, user_lng FLOAT, radius_m INT DEFAULT 100
+)
+RETURNS TABLE(id UUID, name TEXT, distance_meters FLOAT) AS $$
+  SELECT id, name,
+    ST_Distance(coordinates, ST_MakePoint(user_lng, user_lat)::GEOGRAPHY) AS distance_meters
+  FROM recycling_locations
+  WHERE ST_DWithin(coordinates, ST_MakePoint(user_lng, user_lat)::GEOGRAPHY, radius_m)
+    AND is_active = true
+  ORDER BY distance_meters;
+$$ LANGUAGE SQL;
+```
+
+### 7.3 Radar.io Geofence Registration
+
+Each verified recycling partner is registered as a Radar.io geofence with tag `recycling_point`. The Edge Function checks at submission time that the user is inside a registered fence — your third anti-fraud layer alongside AI confidence and perceptual hashing. This is a strong differentiator for the grant committee.
+
+---
+
+## 8. Image Quality Grader
+
+Runs first in the pipeline as a fast gate before any Groq API call. Saves cost on unusable images and adjusts reward multipliers for borderline submissions.
+
+```python
+# quality_grader.py
+import cv2
+import numpy as np
+
+class QualityGrader:
+    REWARD_MULTIPLIERS = {"A": 1.0, "B": 0.8, "C": 0.6, "D": 0.0}
+
+    def grade(self, image_bytes: bytes) -> dict:
+        image = cv2.imdecode(np.frombuffer(image_bytes, np.uint8), cv2.IMREAD_COLOR)
+        gray  = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        blur_score = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+        brightness = float(np.mean(gray))
+        contrast   = float(np.std(gray))
+
+        if   blur_score >= 100 and 50 <= brightness <= 200 and contrast >= 40: grade = "A"
+        elif blur_score >= 50  and 30 <= brightness <= 220 and contrast >= 25: grade = "B"
+        elif blur_score >= 20  and 20 <= brightness <= 240 and contrast >= 15: grade = "C"
+        else: grade = "D"
+
+        return {
+            "grade":             grade,
+            "reward_multiplier": self.REWARD_MULTIPLIERS[grade],
+            "blur_score":        round(blur_score, 2),
+            "brightness":        round(brightness, 2),
+            "contrast":          round(contrast, 2),
+            "is_blurry":         blur_score < 50,
+            "is_too_dark":       brightness < 30,
+            "is_overexposed":    brightness > 220,
+        }
+```
+
+**Grade to reward mapping:**
+- Grade A (sharp, well-lit) — 1.0x token reward
+- Grade B (slightly blurry) — 0.8x token reward
+- Grade C (poor quality) — 0.6x token reward
+- Grade D (unusable) — Rejected before ML inference runs
+
+---
+
+## 9. Fraud Detection System
+
+Three independent signals. All must pass for auto-approval.
+
+### 9.1 Signal Summary
+
+| Signal | Method | Score Weight | Trigger |
+|---|---|---|---|
+| Duplicate image | Perceptual hash (64-bit) | 0.5 | Same hash within 30 days |
+| Rapid submissions | Rate counter in Supabase | 0.4 | 5 or more per hour |
+| Low AI confidence | Confidence score | 0.3 | Below 0.6 confidence |
+| Location spoofing | Radar.io geofence | Hard block | Not inside registered fence |
+
+### 9.2 Score to Action
+
+```
+0.0 - 0.29  ->  auto_approve    Mint token immediately
+0.3 - 0.49  ->  warning         Approve, flag user for monitoring
+0.5 - 0.79  ->  manual_review   Hold for validator decision
+0.8 - 1.0   ->  auto_reject     No reward, user notified
+```
+
+### 9.3 Python Fraud Detector
+
+```python
+# fraud_detector.py
+import imagehash
+from PIL import Image
+import io
+
+class FraudDetector:
+    def __init__(self, db, hash_threshold=10, rate_limit=5):
+        self.db             = db
+        self.hash_threshold = hash_threshold
+        self.rate_limit     = rate_limit
+
+    def perceptual_hash(self, image_bytes: bytes) -> dict:
+        img = Image.open(io.BytesIO(image_bytes))
+        return {
+            "phash": str(imagehash.phash(img)),
+            "dhash": str(imagehash.dhash(img)),
+            "whash": str(imagehash.whash(img)),
+        }
+
+    def is_duplicate(self, user_id: str, hashes: dict) -> bool:
+        recent = self.db.query("""
+            SELECT image_hash_phash, image_hash_dhash, image_hash_whash
+            FROM submissions
+            WHERE user_id = %s AND created_at > NOW() - INTERVAL '30 days'
+        """, (user_id,))
+
+        for row in recent:
+            distances = [
+                imagehash.hex_to_hash(hashes["phash"]) - imagehash.hex_to_hash(row["image_hash_phash"]),
+                imagehash.hex_to_hash(hashes["dhash"]) - imagehash.hex_to_hash(row["image_hash_dhash"]),
+                imagehash.hex_to_hash(hashes["whash"]) - imagehash.hex_to_hash(row["image_hash_whash"]),
+            ]
+            if sum(distances) / 3 < self.hash_threshold:
+                return True
+        return False
+
+    def is_rapid_submitter(self, user_id: str) -> bool:
+        count = self.db.query("""
+            SELECT COUNT(*) as cnt FROM submissions
+            WHERE user_id = %s AND created_at > NOW() - INTERVAL '1 hour'
+        """, (user_id,)).fetchone()["cnt"]
+        return count >= self.rate_limit
+
+    def score(self, user_id: str, image_bytes: bytes, confidence: float) -> dict:
+        flags = []
+        total = 0.0
+
+        hashes = self.perceptual_hash(image_bytes)
+        if self.is_duplicate(user_id, hashes):
+            total += 0.5
+            flags.append({"type": "duplicate_image", "severity": "high"})
+
+        if self.is_rapid_submitter(user_id):
+            total += 0.4
+            flags.append({"type": "rapid_submission", "severity": "high"})
+
+        if confidence < 0.6:
+            total += 0.3
+            flags.append({"type": "low_confidence", "severity": "medium"})
+
+        total = min(total, 1.0)
+
+        if   total >= 0.8: action = "auto_reject"
+        elif total >= 0.5: action = "manual_review"
+        elif total >= 0.3: action = "warning"
+        else:              action = "auto_approve"
+
+        return {
+            "fraud_score": round(total, 3), "flags": flags,
+            "recommended_action": action, "image_hashes": hashes
+        }
+```
+
+---
+
+## 10. Weight Estimation
+
+**MVP:** Heuristic model — ships immediately, no training required.
+**Post-MVP:** Regression model trained on labeled weight data from recycling partners.
+
+```python
+# weight_estimator.py
+class WeightEstimator:
+    BASE_WEIGHTS_KG  = {"plastic": 0.5, "paper": 1.0, "metal": 0.8, "organic": 1.5, "glass": 0.7}
+    QUALITY_FACTORS  = {"A": 1.0, "B": 0.9, "C": 0.8, "D": 0.0}
+
+    def estimate(self, waste_type: str, quality_grade: str) -> float:
+        import random
+        base     = self.BASE_WEIGHTS_KG.get(waste_type, 1.0)
+        quality  = self.QUALITY_FACTORS[quality_grade]
+        variance = random.uniform(0.85, 1.15)
+        return round(base * variance * quality, 2)
+```
+
+---
+
+## 11. TFLite On-Device Inference (React Native)
+
+The exported TFLite model runs on the user's device for instant feedback before the Edge Function confirms the result server-side. Reduces perceived latency to near-zero.
+
+```javascript
+// WasteClassifier.ts
+import * as tf from '@tensorflow/tfjs';
+import '@tensorflow/tfjs-react-native';
+import { bundleResourceIO } from '@tensorflow/tfjs-react-native';
+
+const CLASS_NAMES = ['plastic', 'paper', 'metal', 'organic', 'glass'];
+
+export class WasteClassifier {
+  private model: tf.GraphModel | null = null;
+
+  async load() {
+    await tf.ready();
+    const modelJSON    = require('../assets/model/model.json');
+    const modelWeights = require('../assets/model/group1-shard1of1.bin');
+    this.model = await tf.loadGraphModel(bundleResourceIO(modelJSON, modelWeights));
+  }
+
+  async classify(imageUri: string): Promise<{ wasteType: string; confidence: number }> {
+    if (!this.model) throw new Error('Model not loaded');
+    const tensor      = await this.uriToTensor(imageUri);
+    const predictions = this.model.predict(tensor) as tf.Tensor;
+    const probs       = await predictions.data();
+    const maxIdx      = Array.from(probs).indexOf(Math.max(...Array.from(probs)));
+    tf.dispose([tensor, predictions]);
+    return { wasteType: CLASS_NAMES[maxIdx], confidence: probs[maxIdx] };
+  }
+
+  private async uriToTensor(uri: string): Promise<tf.Tensor4D> {
+    const b64 = await fetch(uri).then(r => r.blob()).then(b =>
+      new Promise<string>((res) => {
+        const reader = new FileReader();
+        reader.onload = () => res((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(b);
+      })
+    );
+    const raw    = tf.tensor(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+    const decoded = tf.image.decodeJpeg(raw as tf.Tensor1D);
+    const resized = tf.image.resizeBilinear(decoded, [224, 224]);
+    const norm    = resized.div(255.0).expandDims(0) as tf.Tensor4D;
+    tf.dispose([raw, decoded, resized]);
+    return norm;
+  }
+}
+```
+
+---
+
+## 12. Supabase Database Schema
+
+```sql
+CREATE TABLE submissions (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id         UUID REFERENCES auth.users(id),
+  waste_type      TEXT NOT NULL CHECK (waste_type IN ('plastic','paper','metal','organic','glass')),
+  ai_confidence   FLOAT NOT NULL,
+  quality_grade   CHAR(1) NOT NULL CHECK (quality_grade IN ('A','B','C','D')),
+  estimated_kg    FLOAT,
+  image_hash      TEXT,
+  latitude        FLOAT,
+  longitude       FLOAT,
+  fraud_score     FLOAT DEFAULT 0,
+  status          TEXT DEFAULT 'pending'
+                    CHECK (status IN ('pending','approved','flagged','rejected')),
+  reward_amount   FLOAT,
+  reward_tx_id    TEXT,
+  device_info     JSONB,
+  created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE reward_queue (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID REFERENCES auth.users(id),
+  submission_id UUID REFERENCES submissions(id),
+  waste_type    TEXT NOT NULL,
+  status        TEXT DEFAULT 'pending'
+                  CHECK (status IN ('pending','processing','completed','failed')),
+  stacks_tx_id  TEXT,
+  created_at    TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE recycling_locations (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name           TEXT NOT NULL,
+  address        TEXT,
+  coordinates    GEOGRAPHY(POINT, 4326) NOT NULL,
+  waste_types    TEXT[] DEFAULT '{}',
+  radar_fence_id TEXT,
+  is_active      BOOLEAN DEFAULT true
+);
+
+CREATE INDEX idx_submissions_user   ON submissions(user_id);
+CREATE INDEX idx_submissions_status ON submissions(status);
+CREATE INDEX idx_submissions_hash   ON submissions(image_hash);
+CREATE INDEX idx_recycling_geo      ON recycling_locations USING GIST(coordinates);
+```
+
+---
+
+## 13. Budget Allocation — AI/ML ($2,000 of $10,000 total)
+
+| Item | Cost | Timing |
+|---|---|---|
+| Google Colab Pro (3 months) | $150 | Months 1-3 |
+| Dataset labeling / Label Studio | $400 | Month 1 |
+| MLflow + DagsHub (free tier) | $0 | Ongoing |
+| Groq API — production inference | $200 | Post-launch |
+| Radar.io Starter plan | $150 | Month 2 onward |
+| Hugging Face Pro (model backup) | $100 | Month 2 |
+| Retraining buffer (GPU compute) | $300 | Months 2-3 |
+| Contingency | $700 | As needed |
+| **Total** | **$2,000** | |
+
+
+---
+
+## 17. MLOps Stack: MLflow + DVC + DagsHub
+
+### 17.1 Why This Combination
+
+| Tool | Role | Why SatsVerdant Needs It |
+|---|---|---|
+| **DVC** | Dataset & pipeline versioning | 26,000 images can't live in Git. DVC tracks dataset versions so every model run is reproducible with the exact data that produced it |
+| **MLflow** | Experiment tracking + model registry | Compare every training run side by side — hyperparameters, accuracy, loss curves. Promotes winning models to production |
+| **DagsHub** | Remote storage + hosted MLflow server + team UI | Free hosting for both DVC remote storage and MLflow tracking server. The grant committee can view your experiment history as a public URL |
+
+**Grant application value:** This stack gives the Stacks Endowment committee a live, public URL showing every training run, dataset version, and model artifact — stronger evidence than a screenshot.
+
+---
+
+### 17.2 DagsHub Project Setup
+
+```bash
+# 1. Create free account at https://dagshub.com
+# 2. Create new repo: satsverdant/satsverdant-ml
+# 3. Install tools
+pip install dagshub dvc mlflow dvc-s3
+
+# 4. Clone your DagsHub repo
+git clone https://dagshub.com/satsverdant/satsverdant-ml.git
+cd satsverdant-ml
+
+# 5. Initialize DVC
+dvc init
+
+# 6. Set DagsHub as DVC remote (free 10GB storage)
+dvc remote add origin https://dagshub.com/satsverdant/satsverdant-ml.dvc
+dvc remote modify origin --local auth basic
+dvc remote modify origin --local user YOUR_DAGSHUB_USERNAME
+dvc remote modify origin --local password YOUR_DAGSHUB_TOKEN
+dvc remote default origin
+
+# 7. Configure MLflow to use DagsHub tracking server
+# (dagshub.init() does this automatically in Colab -- see training script)
+```
+
+---
+
+### 17.3 DVC: Dataset Versioning
+
+DVC tracks your 26,000-image dataset like Git tracks code. Every training run references an exact dataset commit — making results fully reproducible.
+
+#### Directory Structure
+
+```
+satsverdant-ml/
+├── data/
+│   ├── raw/                  <- Original downloaded images (DVC-tracked)
+│   │   ├── trashnet/
+│   │   ├── taco/
+│   │   ├── kaggle/
+│   │   └── custom/
+│   └── processed/            <- Train/val/test splits (DVC-tracked)
+│       ├── train/
+│       │   ├── plastic/
+│       │   ├── paper/
+│       │   ├── metal/
+│       │   ├── organic/
+│       │   └── glass/
+│       ├── val/
+│       └── test/
+├── models/                   <- Trained model artifacts (DVC-tracked)
+│   ├── waste_classifier.h5
+│   └── waste_classifier.tflite
+├── src/
+│   ├── prepare_data.py
+│   ├── train.py
+│   └── evaluate.py
+├── dvc.yaml                  <- Pipeline definition
+├── dvc.lock                  <- Locked pipeline state (commit this)
+├── params.yaml               <- Hyperparameters (tracked by DVC)
+└── .dvc/
+    └── config                <- Remote storage config
+```
+
+#### params.yaml — All Hyperparameters in One File
+
+```yaml
+# params.yaml -- tracked by DVC, referenced by MLflow
+prepare:
+  img_size: 224
+  train_split: 0.80
+  val_split: 0.10
+  test_split: 0.10
+  random_seed: 42
+
+train:
+  base_model: EfficientNetB0
+  batch_size: 32
+  epochs_phase1: 10
+  epochs_phase2: 20
+  lr_phase1: 0.001
+  lr_phase2: 0.00001
+  dropout: 0.4
+  fine_tune_layers: 30
+  num_classes: 5
+  confidence_threshold: 0.70
+
+augmentation:
+  rotation_range: 40
+  zoom_range: 0.3
+  brightness_min: 0.7
+  brightness_max: 1.3
+  horizontal_flip: true
+  vertical_flip: true
+
+fraud:
+  hash_threshold: 10
+  rate_limit_per_hour: 5
+  min_confidence: 0.6
+```
+
+#### dvc.yaml — Reproducible Pipeline
+
+```yaml
+# dvc.yaml -- defines the full ML pipeline as reproducible stages
+stages:
+
+  prepare:
+    cmd: python src/prepare_data.py
+    deps:
+      - src/prepare_data.py
+      - data/raw/
+    params:
+      - prepare
+    outs:
+      - data/processed/
+
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed/
+    params:
+      - train
+      - augmentation
+    outs:
+      - models/waste_classifier.h5
+      - models/waste_classifier.tflite
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
+
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/waste_classifier.h5
+      - data/processed/test/
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
+    plots:
+      - metrics/confusion_matrix.csv:
+          cache: false
+      - metrics/per_class_metrics.csv:
+          cache: false
+```
+
+#### Core DVC Commands
+
+```bash
+# Add dataset to DVC tracking (removes from Git, tracks with DVC)
+dvc add data/raw/
+git add data/raw/.gitignore data/raw.dvc
+git commit -m "Add raw dataset v1 (26k images)"
+dvc push  # Uploads to DagsHub remote storage
+
+# Run full pipeline reproducibly
+dvc repro
+
+# Check what has changed since last run
+dvc status
+
+# Compare metrics between runs
+dvc metrics diff HEAD~1
+
+# Switch to a previous dataset version
+git checkout v1.0
+dvc checkout  # Restores the exact dataset for that commit
+
+# View pipeline DAG
+dvc dag
+```
+
+---
+
+### 17.4 MLflow: Experiment Tracking & Model Registry
+
+#### Complete Training Script with MLflow (Colab-ready)
+
+```python
+# src/train.py -- Full MLflow + DagsHub integration
+import os
+import yaml
+import json
+import subprocess
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras import layers, models, optimizers
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import classification_report, confusion_matrix
+import mlflow
+import mlflow.tensorflow
+import dagshub
+
+# ── DagsHub + MLflow Init ────────────────────────────────────────────
+dagshub.init(
+    repo_owner="satsverdant",
+    repo_name="satsverdant-ml",
+    mlflow=True  # Sets mlflow tracking URI to DagsHub server automatically
+)
+
+# ── Load params from DVC params.yaml ────────────────────────────────
+with open("params.yaml") as f:
+    params = yaml.safe_load(f)
+
+TRAIN_P  = params["train"]
+AUG_P    = params["augmentation"]
+PREP_P   = params["prepare"]
+
+IMG_SIZE    = PREP_P["img_size"]
+BATCH_SIZE  = TRAIN_P["batch_size"]
+NUM_CLASSES = TRAIN_P["num_classes"]
+DATASET_DIR = "data/processed"
+MODEL_H5    = "models/waste_classifier.h5"
+MODEL_TFLITE= "models/waste_classifier.tflite"
+CLASS_NAMES = ["plastic", "paper", "metal", "organic", "glass"]
+
+os.makedirs("models", exist_ok=True)
+os.makedirs("metrics", exist_ok=True)
+
+mlflow.set_experiment("waste-classifier-efficientnetb0")
+
+with mlflow.start_run(run_name=f"effnetb0-bs{BATCH_SIZE}-p1ep{TRAIN_P['epochs_phase1']}") as run:
+
+    # ── Log all params from params.yaml ─────────────────────────────
+    mlflow.log_params({
+        "base_model":         TRAIN_P["base_model"],
+        "img_size":           IMG_SIZE,
+        "batch_size":         BATCH_SIZE,
+        "epochs_phase1":      TRAIN_P["epochs_phase1"],
+        "epochs_phase2":      TRAIN_P["epochs_phase2"],
+        "lr_phase1":          TRAIN_P["lr_phase1"],
+        "lr_phase2":          TRAIN_P["lr_phase2"],
+        "dropout":            TRAIN_P["dropout"],
+        "fine_tune_layers":   TRAIN_P["fine_tune_layers"],
+        "dataset_size":       26000,
+        "dataset_version":    _get_dvc_hash(),
+    })
+
+    # ── Data Generators ──────────────────────────────────────────────
+    train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        rotation_range=AUG_P["rotation_range"],
+        zoom_range=AUG_P["zoom_range"],
+        brightness_range=[AUG_P["brightness_min"], AUG_P["brightness_max"]],
+        horizontal_flip=AUG_P["horizontal_flip"],
+        vertical_flip=AUG_P["vertical_flip"],
+        fill_mode="nearest"
+    )
+    val_datagen = ImageDataGenerator(rescale=1./255)
+
+    train_gen = train_datagen.flow_from_directory(
+        f"{DATASET_DIR}/train",
+        target_size=(IMG_SIZE, IMG_SIZE),
+        batch_size=BATCH_SIZE, class_mode="categorical"
+    )
+    val_gen = val_datagen.flow_from_directory(
+        f"{DATASET_DIR}/val",
+        target_size=(IMG_SIZE, IMG_SIZE),
+        batch_size=BATCH_SIZE, class_mode="categorical"
+    )
+    test_gen = val_datagen.flow_from_directory(
+        f"{DATASET_DIR}/test",
+        target_size=(IMG_SIZE, IMG_SIZE),
+        batch_size=BATCH_SIZE, class_mode="categorical",
+        shuffle=False
+    )
+
+    # ── Model ────────────────────────────────────────────────────────
+    base   = EfficientNetB0(weights="imagenet", include_top=False,
+                            input_shape=(IMG_SIZE, IMG_SIZE, 3))
+    base.trainable = False
+    x      = layers.GlobalAveragePooling2D()(base.output)
+    x      = layers.BatchNormalization()(x)
+    x      = layers.Dense(256, activation="relu")(x)
+    x      = layers.Dropout(TRAIN_P["dropout"])(x)
+    out    = layers.Dense(NUM_CLASSES, activation="softmax")(x)
+    model  = models.Model(base.input, out)
+
+    # ── Phase 1: Train head ──────────────────────────────────────────
+    model.compile(optimizer=optimizers.Adam(TRAIN_P["lr_phase1"]),
+                  loss="categorical_crossentropy", metrics=["accuracy"])
+
+    h1 = model.fit(train_gen, epochs=TRAIN_P["epochs_phase1"],
+                   validation_data=val_gen,
+                   callbacks=[
+                       EarlyStopping(patience=4, restore_best_weights=True),
+                       ReduceLROnPlateau(factor=0.5, patience=2),
+                       ModelCheckpoint(MODEL_H5, save_best_only=True, monitor="val_accuracy"),
+                   ])
+
+    # Log Phase 1 metrics per epoch
+    for i, (tl, ta, vl, va) in enumerate(zip(
+        h1.history["loss"], h1.history["accuracy"],
+        h1.history["val_loss"], h1.history["val_accuracy"]
+    )):
+        mlflow.log_metrics(
+            {"p1_loss": tl, "p1_acc": ta, "p1_val_loss": vl, "p1_val_acc": va},
+            step=i
+        )
+
+    # ── Phase 2: Fine-tune ───────────────────────────────────────────
+    base.trainable = True
+    for layer in base.layers[:-TRAIN_P["fine_tune_layers"]]:
+        layer.trainable = False
+
+    model.compile(optimizer=optimizers.Adam(TRAIN_P["lr_phase2"]),
+                  loss="categorical_crossentropy", metrics=["accuracy"])
+
+    h2 = model.fit(train_gen, epochs=TRAIN_P["epochs_phase2"],
+                   validation_data=val_gen,
+                   callbacks=[
+                       EarlyStopping(patience=6, restore_best_weights=True),
+                       ReduceLROnPlateau(factor=0.3, patience=3),
+                       ModelCheckpoint(MODEL_H5, save_best_only=True, monitor="val_accuracy"),
+                   ])
+
+    for i, (tl, ta, vl, va) in enumerate(zip(
+        h2.history["loss"], h2.history["accuracy"],
+        h2.history["val_loss"], h2.history["val_accuracy"]
+    )):
+        mlflow.log_metrics(
+            {"p2_loss": tl, "p2_acc": ta, "p2_val_loss": vl, "p2_val_acc": va},
+            step=i
+        )
+
+    # ── Evaluate on test set ─────────────────────────────────────────
+    model.load_weights(MODEL_H5)
+    test_loss, test_acc = model.evaluate(test_gen)
+
+    y_true = test_gen.classes
+    y_pred = np.argmax(model.predict(test_gen), axis=1)
+
+    report = classification_report(y_true, y_pred,
+                                   target_names=CLASS_NAMES,
+                                   output_dict=True)
+    cm = confusion_matrix(y_true, y_pred).tolist()
+
+    # Log final metrics
+    mlflow.log_metrics({
+        "test_accuracy":   test_acc,
+        "test_loss":       test_loss,
+        "test_precision":  report["weighted avg"]["precision"],
+        "test_recall":     report["weighted avg"]["recall"],
+        "test_f1":         report["weighted avg"]["f1-score"],
+        "target_met":      int(test_acc >= 0.80),
+    })
+
+    # Log per-class metrics
+    for cls in CLASS_NAMES:
+        mlflow.log_metrics({
+            f"{cls}_precision": report[cls]["precision"],
+            f"{cls}_recall":    report[cls]["recall"],
+            f"{cls}_f1":        report[cls]["f1-score"],
+        })
+
+    # Save metrics for DVC tracking
+    metrics_out = {
+        "test_accuracy": test_acc, "test_loss": test_loss,
+        "test_f1": report["weighted avg"]["f1-score"],
+        "target_met": test_acc >= 0.80
+    }
+    with open("metrics/train_metrics.json", "w") as f:
+        json.dump(metrics_out, f, indent=2)
+
+    # Save confusion matrix for DVC plots
+    import csv
+    with open("metrics/confusion_matrix.csv", "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["actual", "predicted", "count"])
+        for i, row in enumerate(cm):
+            for j, count in enumerate(row):
+                writer.writerow([CLASS_NAMES[i], CLASS_NAMES[j], count])
+
+    # ── Export models ────────────────────────────────────────────────
+    model.save(MODEL_H5)
+
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.target_spec.supported_types = [tf.float16]
+    with open(MODEL_TFLITE, "wb") as f:
+        f.write(converter.convert())
+
+    # ── Log artifacts to MLflow / DagsHub ───────────────────────────
+    mlflow.log_artifact(MODEL_H5,     artifact_path="models")
+    mlflow.log_artifact(MODEL_TFLITE, artifact_path="models")
+    mlflow.log_artifact("params.yaml")
+    mlflow.log_artifact("metrics/confusion_matrix.csv", artifact_path="plots")
+
+    # ── Register in MLflow Model Registry ───────────────────────────
+    model_uri = f"runs:/{run.info.run_id}/models/waste_classifier.h5"
+    mv = mlflow.register_model(model_uri, "satsverdant-waste-classifier")
+
+    # Promote to Staging if target accuracy met
+    if test_acc >= 0.80:
+        client = mlflow.MlflowClient()
+        client.transition_model_version_stage(
+            name="satsverdant-waste-classifier",
+            version=mv.version,
+            stage="Staging"
+        )
+        print(f"Model v{mv.version} promoted to Staging")
+
+    print(f"\n=== Final Results ===")
+    print(f"Test Accuracy: {test_acc:.2%}")
+    print(f"Target Met:    {'YES' if test_acc >= 0.80 else 'NO -- iterate'}")
+    print(f"MLflow Run:    {run.info.run_id}")
+    print(f"DagsHub URL:   https://dagshub.com/satsverdant/satsverdant-ml/mlflow")
+
+
+def _get_dvc_hash() -> str:
+    try:
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                          capture_output=True, text=True)
+        return r.stdout.strip()
+    except Exception:
+        return "unknown"
+```
+
+---
+
+### 17.5 MLflow Model Registry Workflow
+
+Once models are registered on DagsHub, the promotion workflow is:
+
+```
+Training Run
+    |
+    v
+MLflow Run (logged on DagsHub)
+    |
+    v
+Model Registry: satsverdant-waste-classifier
+    |
+    +-- Version 1 (None stage) -- first run
+    |
+    +-- Version 2 (Staging)    -- meets 80% target
+    |
+    +-- Version 3 (Production) -- validated by team, deployed to Groq
+```
+
+#### Querying the Registry Programmatically
 
 ```python
 import mlflow
+import dagshub
 
-class ModelMonitor:
-    def __init__(self, mlflow_tracking_uri):
-        mlflow.set_tracking_uri(mlflow_tracking_uri)
-        self.experiment_name = "satsverdant-production"
-        mlflow.set_experiment(self.experiment_name)
-    
-    def log_inference(self, result, ground_truth=None):
-        """Log inference result for monitoring"""
-        with mlflow.start_run(run_name=f"inference_{int(time.time())}"):
-            # Log predictions
-            mlflow.log_param("waste_type", result['classification']['waste_type'])
-            mlflow.log_metric("confidence", result['classification']['confidence'])
-            mlflow.log_metric("fraud_score", result['fraud_analysis']['fraud_score'])
-            mlflow.log_metric("inference_time", result['metadata']['total_inference_time_seconds'])
-            
-            # Log quality metrics
-            mlflow.log_param("quality_grade", result['quality']['grade'])
-            mlflow.log_metric("blur_score", result['quality']['blur_score'])
-            
-            # If ground truth available (from validator feedback)
-            if ground_truth:
-                is_correct = result['classification']['waste_type'] == ground_truth['waste_type']
-                mlflow.log_metric("is_correct", int(is_correct))
-    
-    def log_daily_metrics(self, metrics):
-        """Log aggregated daily metrics"""
-        with mlflow.start_run(run_name=f"daily_metrics_{datetime.now().strftime('%Y-%m-%d')}"):
-            mlflow.log_metrics(metrics)
-    
-    def detect_model_drift(self):
-        """Detect if model performance is degrading"""
-        # Get last 7 days of accuracy
-        recent_accuracy = self.get_recent_accuracy(days=7)
-        baseline_accuracy = 0.85
-        
-        if recent_accuracy < baseline_accuracy * 0.9:  # 10% degradation
-            self.send_alert(
-                f"Model accuracy degraded to {recent_accuracy:.2%} "
-                f"(baseline: {baseline_accuracy:.2%})"
-            )
-    
-    def send_alert(self, message):
-        """Send alert to team"""
-        # Integration with Slack, PagerDuty, etc.
-        print(f"ALERT: {message}")
-```
+dagshub.init(repo_owner="satsverdant", repo_name="satsverdant-ml", mlflow=True)
 
-### **10.2 A/B Testing Framework**
+client = mlflow.MlflowClient()
 
-```python
-class ModelABTesting:
-    def __init__(self):
-        self.models = {
-            'model_a': WasteClassificationInference('models/waste_classifier_v1.h5'),
-            'model_b': WasteClassificationInference('models/waste_classifier_v2.h5')
-        }
-        self.traffic_split = 0.1  # 10% to model_b
-    
-    def classify_with_ab(self, image_bytes, user_id):
-        # Deterministic assignment based on user_id
-        user_hash = hash(user_id) % 100
-        
-        if user_hash < self.traffic_split * 100:
-            model_name = 'model_b'
-        else:
-            model_name = 'model_a'
-        
-        result = self.models[model_name].classify(image_bytes)
-        result['model_variant'] = model_name
-        
-        return result
+# Get current Production model
+prod_versions = client.get_latest_versions(
+    "satsverdant-waste-classifier", stages=["Production"]
+)
+if prod_versions:
+    prod = prod_versions[0]
+    print(f"Production model: v{prod.version}")
+    print(f"Run ID: {prod.run_id}")
+    print(f"Accuracy: {client.get_run(prod.run_id).data.metrics['test_accuracy']:.2%}")
+
+# Compare all runs in experiment
+experiment = mlflow.get_experiment_by_name("waste-classifier-efficientnetb0")
+runs = mlflow.search_runs(
+    experiment_ids=[experiment.experiment_id],
+    order_by=["metrics.test_accuracy DESC"]
+)
+print(runs[["run_id", "metrics.test_accuracy", "params.epochs_phase2", "params.lr_phase2"]].head())
 ```
 
 ---
 
-## 11. Continuous Improvement
+### 17.6 DagsHub Dashboard
 
-### **11.1 Active Learning Pipeline**
+Everything is visible at:
+`https://dagshub.com/satsverdant/satsverdant-ml`
 
-```python
-class ActiveLearningPipeline:
-    def __init__(self, db_connection, model):
-        self.db = db_connection
-        self.model = model
-        self.uncertainty_threshold = 0.3  # Top-2 prob difference
-    
-    def identify_uncertain_samples(self, days=7):
-        """Find submissions where model was uncertain"""
-        uncertain_submissions = self.db.query("""
-            SELECT id, image_ipfs_cid, ai_confidence, ai_waste_type
-            FROM submissions
-            WHERE created_at > NOW() - INTERVAL '%s days'
-              AND ai_confidence < 0.8
-              AND status IN ('approved', 'rejected')
-            ORDER BY ai_confidence ASC
-            LIMIT 100
-        """, (days,))
-        
-        return uncertain_submissions
-    
-    def prioritize_for_labeling(self, submissions):
-        """Prioritize samples for human labeling"""
-        priorities = []
-        
-        for sub in submissions:
-            # Calculate information value
-            priority_score = (1 - sub['ai_confidence']) * 100
-            
-            priorities.append({
-                'submission_id': sub['id'],
-                'priority_score': priority_score,
-                'current_label': sub['ai_waste_type'],
-                'confidence': sub['ai_confidence']
-            })
-        
-        return sorted(priorities, key=lambda x: x['priority_score'], reverse=True)
-    
-    def retrain_with_new_data(self, new_labeled_data):
-        """Retrain model with newly labeled data"""
-        # Load existing training data
-        # Add new labeled samples
-        # Retrain model
-        # Evaluate on validation set
-        # Deploy if improvement > 2%
-        pass
-```
+| Tab | What You See |
+|---|---|
+| **Experiments** | Every MLflow run — hyperparams, accuracy, loss curves side by side |
+| **Models** | MLflow Model Registry — versions, stages (None/Staging/Production) |
+| **Data** | DVC-tracked dataset versions — what data each model was trained on |
+| **Files** | Code, params.yaml, metrics JSON, confusion matrix plots |
+| **Compare** | Side-by-side diff of any two runs — instantly see if a change helped |
 
-### **11.2 Model Retraining Schedule**
+This URL is shareable with the Stacks Endowment grant committee as direct evidence of your Model Evaluation Report deliverable.
 
-```
-Weekly:  Monitor performance metrics, identify drift
-Monthly: Retrain with validated submissions (active learning)
-Quarterly: Full model retraining with expanded dataset
+---
+
+### 17.7 DVC + MLflow Integration: Full Reproducibility
+
+Any team member (or grant reviewer) can reproduce any training run exactly:
+
+```bash
+# Clone the repo
+git clone https://dagshub.com/satsverdant/satsverdant-ml.git
+cd satsverdant-ml
+
+# Restore the exact dataset used for a specific run
+git checkout <commit-sha>
+dvc pull  # Downloads exact dataset version from DagsHub storage
+
+# Re-run the exact pipeline
+dvc repro
+
+# Compare with the original MLflow run
+mlflow ui  # Or view on DagsHub
 ```
 
 ---
 
-## 12. Success Criteria
+### 17.8 Updated Install for Colab
 
-### **✅ Model Performance**
-- [ ] Waste classification accuracy ≥ 85%
-- [ ] Per-class precision/recall ≥ 80%
-- [ ] Inference time < 1 second (CPU)
-- [ ] Inference time < 100ms (GPU)
-- [ ] Model size < 50MB (mobile)
+```python
+# Cell 1: Install all dependencies
+!pip install tensorflow albumentations scikit-learn \
+            mlflow dagshub dvc imagehash \
+            pyyaml
 
-### **✅ Fraud Detection**
-- [ ] Fraud detection precision ≥ 90%
-- [ ] Fraud detection recall ≥ 70%
+# Cell 2: Authenticate DagsHub
+import dagshub
+dagshub.auth.add_app_token(token="YOUR_DAGSHUB_TOKEN")
+# Or set env var: os.environ["DAGSHUB_TOKEN"] = "..."
+
+# Cell 3: Pull dataset from DagsHub DVC remote
+!dvc pull data/processed/  # Downloads 26k images to Colab
+```
+
+---
+
+### 17.9 Week 5 DVC Setup Checklist
+
+Runs in parallel with dataset preparation:
+
+- [ ] Create DagsHub account and repo (`satsverdant/satsverdant-ml`)
+- [ ] Initialize DVC in the repo (`dvc init`)
+- [ ] Configure DagsHub as DVC remote storage
+- [ ] Add raw dataset folders to DVC (`dvc add data/raw/`)
+- [ ] Create `params.yaml` with all hyperparameters
+- [ ] Create `dvc.yaml` pipeline stages (prepare, train, evaluate)
+- [ ] First `dvc push` — uploads dataset to DagsHub storage
+- [ ] Verify MLflow tracking works with `dagshub.init()`
+- [ ] Make DagsHub repo public (grant committee access)
+
+---
+
+## 14. Success Criteria
+
+### Model Performance
+- [ ] Waste classification accuracy >= 80% on holdout test set
+- [ ] Per-class precision/recall >= 75%
+- [ ] Groq inference latency < 200ms per image
+- [ ] TFLite on-device inference < 100ms
+
+### Fraud Detection
+- [ ] Duplicate detection accuracy >= 95%
 - [ ] False positive rate < 5%
-- [ ] Duplicate detection accuracy ≥ 95%
+- [ ] Radar.io geofence live with >= 3 registered recycling partners
 
-### **✅ System Performance**
-- [ ] API response time < 2 seconds (p95)
-- [ ] Support 1000 inferences/day (MVP)
-- [ ] Scale to 10,000 inferences/day (post-MVP)
+### System Performance
+- [ ] Edge Function p95 response time < 2 seconds end-to-end
+- [ ] Supports 1,000 inferences/day at MVP scale
+- [ ] Zero critical security incidents in first 30 days
 
-### **✅ Data Quality**
-- [ ] Dataset size ≥ 15,000 images
-- [ ] Balanced class distribution (±20%)
-- [ ] High-quality labels (inter-annotator agreement ≥ 90%)
+### Data Quality
+- [ ] 26,000 images with verified labels
+- [ ] Class balance within +/-30%
+- [ ] Inter-annotator agreement >= 85%
 
-### **✅ Monitoring**
-- [ ] Real-time performance tracking
-- [ ] Model drift detection
-- [ ] Alerting on degradation
-- [ ] A/B testing framework
+### MLOps
+- [ ] DagsHub repo live and public (grant committee can view)
+- [ ] All training runs logged to MLflow on DagsHub
+- [ ] Dataset versioned with DVC and pushed to DagsHub remote
+- [ ] Winning model registered in MLflow Model Registry at Staging or Production stage
+- [ ] `dvc repro` reproduces training pipeline from scratch
+- [ ] params.yaml captures all hyperparameters used in grant deliverable
 
 ---
 
-## 13. Risks & Mitigation
-
-### **13.1 Technical Risks**
+## 15. Risks & Mitigations
 
 | Risk | Impact | Mitigation |
-|------|--------|------------|
-| **Low initial accuracy** | User trust, rewards accuracy | Start with high confidence threshold (0.7), manual review for uncertain |
-| **Dataset bias** | Poor performance on edge cases | Diverse data collection, stratified sampling |
-| **Model overfitting** | Poor generalization | Strong augmentation, regularization, cross-validation |
-| **Inference latency** | Poor UX | Model optimization, caching, async processing |
-| **Fraud evolution** | Attackers adapt | Continuous monitoring, model updates, multi-signal detection |
-
-### **13.2 Data Risks**
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| **Insufficient training data** | Low accuracy | Synthetic data, transfer learning, data partnerships |
-| **Label quality issues** | Model learns wrong patterns | Multiple annotators, quality checks, validator feedback |
-| **Distribution shift** | Model fails on new waste types | Regular retraining, active learning, model monitoring |
+|---|---|---|
+| Accuracy below 80% after training | Grant deliverable miss | 3 training runs budgeted; fallback to EfficientNetB3 |
+| Groq API rate limits at scale | Inference bottleneck | Hugging Face Inference API as hot fallback |
+| Radar.io geofence false rejections | User frustration | 100m radius (generous), manual appeal flow |
+| Supabase Edge Function cold starts | Latency spikes | Keep-warm pings every 5 minutes via cron |
+| Real-world photos differ from training data | Accuracy drops post-launch | Active learning: validator-confirmed submissions feed back into monthly retraining |
+| DVC remote storage full (10GB free tier) | Dataset push fails | Compress images to JPEG 85% quality before DVC add; 26k images ~8GB compressed |
 
 ---
 
-## 14. Timeline & Milestones
+## 16. 8-Week Delivery Timeline
 
-### **Week 1-2: Data Collection & Preparation**
-- [ ] Collect/download 15,000+ images
-- [ ] Set up annotation pipeline (Label Studio)
-- [ ] Create train/val/test splits
-- [ ] Build preprocessing pipeline
+### Week 5 — Data Pipeline & MLOps Setup
+- [ ] Create DagsHub repo (satsverdant/satsverdant-ml), make it public
+- [ ] Initialize DVC, configure DagsHub as remote storage
+- [ ] Download and organize all 26,000 images into train/val/test splits
+- [ ] Run quality review pass in Label Studio
+- [ ] Add dataset to DVC (`dvc add data/processed/`) and push to DagsHub
+- [ ] Create params.yaml with all hyperparameters
+- [ ] Create dvc.yaml pipeline (prepare, train, evaluate stages)
+- [ ] Enable PostGIS on Supabase, create full schema
+- [ ] Verify MLflow tracking works via `dagshub.init()`
 
-### **Week 3-4: Model Development**
-- [ ] Implement classification model
-- [ ] Train initial model
-- [ ] Evaluate and iterate
-- [ ] Implement weight estimator
+### Week 6 — Model Training
+- [ ] Run `dvc repro` to execute full pipeline on Colab A100
+- [ ] Phase 1 (frozen) + Phase 2 (fine-tune) — all metrics auto-logged to MLflow
+- [ ] Evaluate — confirm >=80% accuracy on test set
+- [ ] Export H5 (backend) + TFLite (mobile) models
+- [ ] Register model in MLflow Model Registry, promote to Staging if target met
+- [ ] Log confusion matrix + per-class metrics as DVC plots
+- [ ] Share DagsHub experiment URL as grant evidence
 
-### **Week 5-6: Fraud Detection**
-- [ ] Implement perceptual hashing
-- [ ] Build fraud detection pipeline
-- [ ] Test on simulated fraud cases
-- [ ] Tune thresholds
+### Week 7 — Integration
+- [ ] Deploy Supabase Edge Function /classify
+- [ ] Integrate Groq API for inference
+- [ ] Integrate Radar.io geofencing (register first 3 recycling partners)
+- [ ] Connect fraud detection pipeline end-to-end
+- [ ] Wire reward_queue to Clarity contract worker
 
-### **Week 7: Integration & Testing**
-- [ ] Build unified ML service
-- [ ] API development
-- [ ] Integration testing with backend
-- [ ] Performance optimization
-
-### **Week 8: Deployment & Monitoring**
-- [ ] Deploy to staging
-- [ ] Load testing
-- [ ] Set up monitoring
-- [ ] Deploy to production
+### Week 8 — Testing & Documentation
+- [ ] Full end-to-end tests: photo -> classification -> reward trigger
+- [ ] Model Evaluation Report (grant deliverable evidence) — use DagsHub experiment URL
+- [ ] Verify `dvc repro` reproduces training from scratch (reproducibility proof)
+- [ ] Promote winning model to Production stage in MLflow Model Registry
+- [ ] Load test: 100 concurrent submissions
+- [ ] Publish reproducible Colab notebook to GitHub
+- [ ] Document Groq + Radar.io integration for grant committee review
+- [ ] Share DagsHub public repo link as Model Evaluation Report evidence
 
 ---
 
-This AI/ML PRD provides everything needed to build, train, deploy, and maintain the SatsVerdant machine learning system!
+*SatsVerdant AI/ML PRD v2.1 — March 2026. Adds MLflow + DVC + DagsHub MLOps stack. Supersedes v2.0.*
