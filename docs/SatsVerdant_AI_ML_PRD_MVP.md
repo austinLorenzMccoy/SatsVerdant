@@ -2,9 +2,9 @@
 
 ## 1. Executive Summary
 
-**Project:** SatsVerdant AI/ML System
-**Version:** 2.1 (MVP — MLOps Revised)
-**Timeline:** 8 weeks (Weeks 5–8 of 12-week grant schedule)
+**Project:** SatsVerdant AI/ML System \
+**Version:** 2.1 (MVP — MLOps Revised) \
+**Timeline:** 8 weeks (Weeks 5–8 of 12-week grant schedule) \
 **Goal:** Production-ready waste classification, fraud prevention, and location verification system achieving >80% accuracy, fully integrated into the Supabase backend and Stacks blockchain reward pipeline — with full MLOps traceability via MLflow, DVC, and DagsHub.
 
 ### What Changed from v1.0

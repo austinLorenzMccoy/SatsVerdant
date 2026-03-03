@@ -2,9 +2,9 @@
 
 ## 1. Executive Summary
 
-**Project:** SatsVerdant Backend
-**Version:** 2.0 (MVP — Revised)
-**Timeline:** 12 weeks
+**Project:** SatsVerdant Backend \
+**Version:** 2.0 (MVP — Revised) \
+**Timeline:** 12 weeks \
 **Goal:** Production-ready backend to support waste tokenization, AI classification, validator workflows, and sBTC reward distribution — built entirely on Supabase with zero self-managed infrastructure.
 
 ### What Changed from v1.0

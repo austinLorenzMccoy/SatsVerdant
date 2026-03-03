@@ -2,10 +2,10 @@
 
 ## 1. Executive Summary
 
-**Project:** SatsVerdant Clarity Smart Contracts  
-**Blockchain:** Stacks (Bitcoin Layer 2)  
-**Version:** 1.0 (MVP)  
-**Timeline:** 4 weeks (parallel with backend development)  
+**Project:** SatsVerdant Clarity Smart Contracts   \
+**Blockchain:** Stacks (Bitcoin Layer 2)   \
+**Version:** 1.0 (MVP)   \
+**Timeline:** 4 weeks (parallel with backend development)   \
 **Goal:** Production-ready smart contracts for waste tokenization, validator staking, and sBTC reward distribution with maximum security and auditability.
 
 ---
