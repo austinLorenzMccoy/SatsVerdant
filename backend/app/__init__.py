@@ -1,1 +1,0 @@
-# SatsVerdant Backend Application

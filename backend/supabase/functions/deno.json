@@ -1,0 +1,10 @@
+# Supabase Edge Function Configuration
+# This file configures the Deno runtime for Supabase Edge Functions
+
+# Import maps for Deno
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.168.0/",
+    "supabase/": "https://esm.sh/@supabase/supabase-js@2/"
+  }
+}
