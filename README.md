@@ -55,7 +55,7 @@ mvp_folder/
 │   ├── components/       # Reusable UI components
 │   ├── hooks/           # Custom React hooks
 │   └── public/          # Static assets
-├── ⚙️ backend/            # FastAPI + Python
+├── ⚙️ backend/            # Supabase + FastAPI + Python
 │   ├── app/             # API endpoints
 │   ├── models/          # Database models
 │   ├── services/        # Business logic
@@ -66,7 +66,9 @@ mvp_folder/
 │   └── settings/       # Deployment configs
 ├── 🤖 ml-training/        # Machine Learning Pipeline
 │   ├── scripts/        # Training scripts
-│   └── models/         # Trained models
+│   ├── models/         # Trained models
+│   ├── data/           # Dataset (DVC-tracked)
+│   └── dvc.yaml        # Pipeline definition
 └── 📚 docs/              # Documentation & PRDs
 ```
 
@@ -99,6 +101,14 @@ mvp_folder/
 | **Stacks** | Bitcoin L1 smart contracts |
 | **Clarity** | Smart contract language |
 | **TensorFlow** | ML model training |
+| **Groq API** | Ultra-fast inference (~50ms/image) |
+| **Supabase** | Database + Edge Functions |
+| **MLflow** | Experiment tracking |
+| **DVC** | Dataset versioning |
+| **DagsHub** | Remote storage + collaboration |
+| **PostGIS** | Spatial queries for location verification |
+| **Radar.io** | Geofencing for fraud prevention |
+| **TensorFlow Lite** | On-device inference (React Native) |
 | **PyTorch** | Alternative ML framework |
 
 ---
@@ -235,12 +245,16 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - [x] Backend API with FastAPI
 - [x] ML pipeline for waste classification
 - [x] Netlify deployment configuration
+- [x] Real wallet integration (Stacks, sBTC)
+- [x] MIT license and comprehensive documentation
 
 ### 🚧 In Progress
 - [ ] Backend deployment to Render
-- [ ] Smart contract deployment to testnet
-- [ ] Real wallet integration
+- [ ] Smart contract deployment to testnet/mainnet
+- [ ] ML model training and deployment
 - [ ] Image recognition for waste verification
+- [ ] Advanced analytics dashboard
+- [ ] Mobile app (React Native)
 
 ### 🎯 Planned Features
 - [ ] Mobile app (React Native)
@@ -248,6 +262,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - [ ] Community features and leaderboards
 - [ ] NFT rewards for milestones
 - [ ] Enterprise API access
+- [ ] International expansion
 
 ---
 
@@ -256,8 +271,9 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 | Link | Description |
 |------|-------------|
 | [🌐 Live Demo](https://satsverdant.netlify.app) | Deployed frontend application |
-| [📚 Documentation](./docs/) | Comprehensive project docs |
+| [📚 Documentation](./docs/) | Comprehensive project docs & PRDs |
 | [📜 Smart Contracts](./contracts/) | Clarity contract code |
+| [🤖 ML Pipeline](./ml-training/) | Machine learning training & models |
 | [⚙️ API Docs](https://your-api.onrender.com/docs) | Backend API documentation |
 | [🐛 Issues](https://github.com/austinLorenzMccoy/SatsVerdant/issues) | Bug reports and feature requests |
 
