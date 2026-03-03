@@ -1,0 +1,80 @@
+# DVC Pipeline Definition for SatsVerdant ML
+# Defines reproducible stages for data preparation, training, and evaluation
+
+stages:
+  # Stage 1: Download and prepare datasets
+  prepare:
+    cmd: python src/prepare_data.py
+    deps:
+      - src/prepare_data.py
+      - data/raw/
+    params:
+      - prepare
+    outs:
+      - data/processed/
+    metrics:
+      - metrics/prepare_metrics.json:
+          cache: false
+
+  # Stage 2: Train the model
+  train:
+    cmd: python src/train.py
+    deps:
+      - src/train.py
+      - data/processed/
+      - params.yaml
+    params:
+      - train
+      - augmentation
+      - mlflow
+    outs:
+      - models/waste_classifier.h5
+      - models/waste_classifier.tflite
+    metrics:
+      - metrics/train_metrics.json:
+          cache: false
+    plots:
+      - metrics/training_history.csv:
+          cache: false
+
+  # Stage 3: Evaluate model performance
+  evaluate:
+    cmd: python src/evaluate.py
+    deps:
+      - src/evaluate.py
+      - models/waste_classifier.h5
+      - data/processed/test/
+    params:
+      - train.confidence_threshold
+    metrics:
+      - metrics/eval_metrics.json:
+          cache: false
+    plots:
+      - metrics/confusion_matrix.csv:
+          cache: false
+      - metrics/per_class_metrics.csv:
+          cache: false
+
+  # Stage 4: Quality grading analysis
+  quality_analysis:
+    cmd: python src/quality_grader.py --analyze
+    deps:
+      - src/quality_grader.py
+      - data/processed/test/
+    params:
+      - quality
+    metrics:
+      - metrics/quality_metrics.json:
+          cache: false
+
+  # Stage 5: Fraud detection analysis
+  fraud_analysis:
+    cmd: python src/fraud_detector.py --analyze
+    deps:
+      - src/fraud_detector.py
+      - data/processed/test/
+    params:
+      - fraud
+    metrics:
+      - metrics/fraud_metrics.json:
+          cache: false

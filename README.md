@@ -149,6 +149,18 @@ cd ml-training
 pip install -r requirements.txt
 ./run_pipeline.sh
 ```
+🌐 **MLflow Dashboard**: `https://dagshub.com/satsverdant/satsverdant-ml`
+📊 **Model Registry**: Tracked experiments with version control
+🎯 **Target**: >80% accuracy on waste classification
+
+### 📡 Dataset & Training
+- **Dataset Size**: 26,000 labeled images across 5 waste categories
+- **Class Distribution**: Plastic (8k), Paper (6.5k), Metal (5k), Organic (4.5k), Glass (2k)
+- **Data Sources**: TrashNet, TACO, Kaggle, custom collections
+- **MLOps Stack**: MLflow + DVC + DagsHub for full reproducibility
+- **Experiment Tracking**: Every run logged with hyperparameters and metrics
+- **Model Registry**: Versioned models with staging/production workflow
+- **Note**: Electronic waste removed from MVP scope (Phase 4 expansion)
 
 ---
 

@@ -108,11 +108,11 @@ User submits photo (React Native / Web)
 ### 4.2 Class Distribution
 
 ```
-Plastic:   8,000 images  (bottles, bags, containers, packaging)
-Paper:     6,500 images  (cardboard, newspapers, boxes)
-Metal:     5,000 images  (cans, foil, scrap)
-Organic:   4,500 images  (food waste, yard waste, compost)
-Glass:     2,000 images  (bottles, jars)
+Plastic:   8,000 images  (30.8%) - bottles, bags, containers, packaging
+Paper:     6,500 images  (25.0%) - cardboard, newspapers, boxes
+Metal:     5,000 images  (19.2%) - cans, foil, scrap
+Organic:   4,500 images  (17.3%) - food waste, yard waste, compost
+Glass:     2,000 images  (7.7%)  - bottles, jars
 Total:    26,000 images
 ```
 
