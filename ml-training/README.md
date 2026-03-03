@@ -27,19 +27,20 @@ ml-training/
 │   ├── evaluate.py          # Model evaluation
 │   ├── quality_grader.py    # Image quality assessment
 │   ├── fraud_detector.py    # Fraud detection algorithms
-│   └── weight_estimator.py  # Weight estimation logic
+│   ├── synthetic_generator.py # Synthetic data generation
+│   ├── retrain_pipeline.py  # Automated retraining pipeline
+│   └── monitor_quality.py   # Dataset quality monitoring
 ├── scripts/                  # Utility scripts
-│   ├── download_datasets.py # Download source datasets
-│   ├── setup_colab.py       # Colab environment setup
-│   └── deploy_model.py      # Model deployment utilities
+│   └── setup_colab.py       # Colab environment setup
 ├── metrics/                  # Evaluation metrics (DVC-tracked)
-│   ├── train_metrics.json   # Training results
-│   ├── eval_metrics.json    # Test set performance
-│   └── confusion_matrix.csv # Confusion matrix data
+│   ├── train_metrics.json    # Training results
+│   ├── eval_metrics.json     # Test set performance
+│   ├── quality_metrics.json  # Image quality analysis
+│   ├── fraud_metrics.json    # Fraud detection metrics
+│   ├── dataset_quality.json  # Dataset quality monitoring
+│   └── confusion_matrix.csv  # Confusion matrix data
 ├── notebooks/               # Jupyter notebooks for experiments
-│   ├── data_exploration.ipynb
-│   ├── model_experiments.ipynb
-│   └── error_analysis.ipynb
+│   └── README.md             # Colab setup guide
 ├── params.yaml              # Hyperparameters (DVC-tracked)
 ├── dvc.yaml                 # Pipeline definition
 ├── dvc.lock                 # Locked pipeline state
@@ -205,7 +206,59 @@ export MLFLOW_TRACKING_URI=https://dagshub.com/satsverdant/satsverdant-ml.mlflow
 - **Inference Latency**: <100ms (Groq)
 - **Model Size**: <10MB (TFLite)
 
-## 🚀 Deployment
+## � Advanced Analysis Scripts
+
+### **Image Quality Grading**
+```bash
+# Grade entire dataset
+python src/quality_grader.py --analyze --dataset data/processed/test
+
+# Grade single image
+python src/quality_grader.py --grade-image /path/to/image.jpg
+```
+**Features**: Blur detection, brightness analysis, contrast scoring, reward multipliers
+
+### **Fraud Detection**
+```bash
+# Analyze dataset for fraud patterns
+python src/fraud_detector.py --analyze --dataset data/processed/test
+
+# Check single submission
+python src/fraud_detector.py --check-submission /path/to/image.jpg --user-id user123
+```
+**Features**: Perceptual hashing, rate limiting, quality checks, fraud scoring
+
+### **Synthetic Data Generation**
+```bash
+# Augment specific class
+python src/synthetic_generator.py --class glass --target-count 3500
+
+# Augment all underrepresented classes
+python src/synthetic_generator.py --all-classes
+```
+**Features**: Background replacement, synthetic backgrounds, quality control
+
+### **Automated Retraining**
+```bash
+# Dry run to check conditions
+python src/retrain_pipeline.py --dry-run
+
+# Run full retraining pipeline
+python src/retrain_pipeline.py --run
+```
+**Features**: Active learning, data collection, model improvement, MLflow integration
+
+### **Dataset Quality Monitoring**
+```bash
+# Monitor dataset quality
+python src/monitor_quality.py --dataset data/processed/train
+
+# Check annotator agreement only
+python src/monitor_quality.py --check-annotator-agreement
+```
+**Features**: Class balance, distribution drift, quality metrics, MLflow logging
+
+## �🚀 Deployment
 
 ### **Production Pipeline**
 ```bash
