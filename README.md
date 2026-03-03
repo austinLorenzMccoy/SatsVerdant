@@ -8,8 +8,10 @@
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Visit_Success?style=for-the-badge&logo=netlify&logoColor=white)](https://satsverdant.netlify.app)
 [![Frontend](https://img.shields.io/badge/Frontend-Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Backend](https://img.shields.io/badge/Backend-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Backend](https://img.shields.io/badge/Backend-Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Blockchain](https://img.shields.io/badge/Blockchain-Stacks-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white)](https://www.stacks.co/)
+[![ML](https://img.shields.io/badge/ML-EfficientNetB0-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://tensorflow.org/)
+[![MLOps](https://img.shields.io/badge/MLOps-MLflow%20%2B%20DVC-007396?style=for-the-badge&logo=dvc&logoColor=white)](https://dvc.org/)
 
 </div>
 
