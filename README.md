@@ -234,7 +234,7 @@ cd contracts && npm test
 
 ### 🚀 Deployment
 - **Frontend**: Netlify (automatic on main branch push)
-- **Backend**: Render (manual deployment)
+- **Backend**: Supabase (serverless, fully managed)
 - **Contracts**: Stacks testnet/mainnet deployment
 
 ---
@@ -258,14 +258,14 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 - [x] Landing page with hero and sections
 - [x] Dashboard with all core pages
 - [x] Smart contracts for waste tokenization
-- [x] Backend API with FastAPI
+- [x] Supabase backend with Edge Functions
 - [x] ML pipeline for waste classification
 - [x] Netlify deployment configuration
 - [x] Real wallet integration (Stacks, sBTC)
 - [x] MIT license and comprehensive documentation
 
 ### 🚧 In Progress
-- [ ] Backend deployment to Render
+- [ ] Supabase backend deployment
 - [ ] Smart contract deployment to testnet/mainnet
 - [ ] ML model training and deployment
 - [ ] Image recognition for waste verification
