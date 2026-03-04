@@ -2,9 +2,9 @@
 
 ## 1. Executive Summary
 
-**Project:** SatsVerdant Backend \
-**Version:** 2.0 (MVP — Revised) \
-**Timeline:** 12 weeks \
+**Project:** SatsVerdant Backend
+**Version:** 2.0 (MVP — Revised)
+**Timeline:** 12 weeks
 **Goal:** Production-ready backend to support waste tokenization, AI classification, validator workflows, and sBTC reward distribution — built entirely on Supabase with zero self-managed infrastructure.
 
 ### What Changed from v1.0
@@ -413,15 +413,19 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION create_reward_on_mint()
 RETURNS TRIGGER AS $$
 DECLARE
-  sbtc_rate  FLOAT := 0.0001; -- tokens per sBTC
-  sbtc_amt   FLOAT;
+  -- Matches rewards-pool.clar (define-data-var conversion-rate uint u10000000)
+  -- Formula: sbtc = tokens / 10_000_000  =>  1,000 tokens = 0.0001 sBTC
+  -- In sats:  tokens * 10 sats per token  =>  1,000 tokens = 10,000 sats = 0.0001 sBTC
+  conversion_rate  FLOAT := 10000000.0;
+  sbtc_amt         FLOAT;
 BEGIN
   IF NEW.status = 'minted' AND OLD.status = 'minting' THEN
-    sbtc_amt := (NEW.tokens_minted::FLOAT / 100.0) * sbtc_rate;
+    sbtc_amt := NEW.tokens_minted::FLOAT / conversion_rate;
 
     INSERT INTO rewards (user_id, submission_id, waste_tokens, sbtc_amount,
                          conversion_rate, status)
-    VALUES (NEW.user_id, NEW.id, NEW.tokens_minted, sbtc_amt, sbtc_rate, 'claimable');
+    VALUES (NEW.user_id, NEW.id, NEW.tokens_minted, sbtc_amt,
+            1.0 / conversion_rate, 'claimable');
   END IF;
   RETURN NEW;
 END;
