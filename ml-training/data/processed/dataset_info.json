@@ -1,0 +1,45 @@
+{
+  "total_images": 27000,
+  "train_images": 21600,
+  "val_images": 2700,
+  "test_images": 2700,
+  "classes": [
+    "paper",
+    "metal",
+    "organic",
+    "glass",
+    "plastic"
+  ],
+  "class_distribution": {
+    "paper": {
+      "train": 5200,
+      "val": 650,
+      "test": 650,
+      "total": 6500
+    },
+    "metal": {
+      "train": 4160,
+      "val": 520,
+      "test": 520,
+      "total": 5200
+    },
+    "organic": {
+      "train": 3600,
+      "val": 450,
+      "test": 450,
+      "total": 4500
+    },
+    "glass": {
+      "train": 2240,
+      "val": 280,
+      "test": 280,
+      "total": 2800
+    },
+    "plastic": {
+      "train": 6400,
+      "val": 800,
+      "test": 800,
+      "total": 8000
+    }
+  }
+}

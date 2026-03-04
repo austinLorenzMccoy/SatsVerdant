@@ -1,0 +1,33 @@
+schema: '2.0'
+stages:
+  prepare:
+    cmd: python src/prepare_data.py
+    deps:
+    - path: data/raw/
+      hash: md5
+      md5: 8bb59db35aa3bac1f182e240cdfb4fcb.dir
+      size: 0
+      nfiles: 27000
+    - path: src/prepare_data.py
+      hash: md5
+      md5: 535589f26e9d9aee008948dda92ce047
+      size: 10982
+      isexec: true
+    params:
+      params.yaml:
+        prepare:
+          img_size: 224
+          train_split: 0.8
+          val_split: 0.1
+          test_split: 0.1
+          random_seed: 42
+    outs:
+    - path: data/processed/
+      hash: md5
+      md5: 3b7d40a0b761e2c06a06964c44db1d80.dir
+      size: 719
+      nfiles: 27001
+    - path: metrics/prepare_metrics.json
+      hash: md5
+      md5: 24148b4c24332103b88a4f5d3472114b
+      size: 151
